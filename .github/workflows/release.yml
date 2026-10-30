@@ -1,0 +1,95 @@
+name: Release & Publish VPM Repository
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published, edited, deleted]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "vpm-release-pages"
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & Create GitHub Release
+    runs-on: ubuntu-latest
+    if: github.event_name != 'release'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build VPM package zip
+        id: build
+        run: python3 .github/scripts/build_zip.py
+
+      - name: Create GitHub Release if new version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.build.outputs.tag }}
+          VERSION: ${{ steps.build.outputs.version }}
+          ZIP_PATH: ${{ steps.build.outputs.zip_path }}
+        run: |
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists. Skipping release creation."
+          else
+            echo "Creating new GitHub Release ${TAG}..."
+            gh release create "${TAG}" "${ZIP_PATH}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --target "${GITHUB_SHA}" \
+              --title "v${VERSION}" \
+              --generate-notes
+          fi
+
+  pages:
+    name: Update VPM Index & GitHub Pages
+    runs-on: ubuntu-latest
+    needs: release
+    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate VPM index.json & web page
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 .github/scripts/build_pages.py --output _site
+
+      - name: Check GitHub Pages configuration
+        id: pages_cfg
+        uses: actions/configure-pages@v5
+        continue-on-error: true
+
+      - name: Guide if GitHub Pages is not enabled yet
+        if: steps.pages_cfg.outcome != 'success'
+        run: |
+          {
+            echo "## ⚠️ GitHub Pages の初期設定が必要です（初回のみ）"
+            echo ""
+            echo "GitHub Release（VPM用 `.zip` ファイルとタグ）の作成は完了していますが、GitHub Pages がまだ有効化されていません。"
+            echo ""
+            echo "1. リポジトリ上部の **Settings** ＞ 左メニューの **Pages** を開く"
+            echo "2. **Build and deployment** ＞ **Source** を **\`GitHub Actions\`** に変更する"
+            echo "3. この Actions 画面に戻り、右上の **Re-run jobs** ＞ **Re-run failed jobs** を押す"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::GitHub Pages Source is not set to 'GitHub Actions' yet. Please enable it in Settings > Pages."
+          exit 1
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
