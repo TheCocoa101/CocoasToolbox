@@ -1,7 +1,7 @@
 {
   "name": "com.thecocoa101.cocoas-toolbox",
   "displayName": "Cocoa's Toolbox",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "unity": "2022.3",
   "description": "VRChatアバター改変・Unity作業を効率化するエディタ拡張ツール集（Armature Transfer / New Blendshape From Mix / Missing Asset Importer）",
   "author": {
