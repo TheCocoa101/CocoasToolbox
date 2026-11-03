@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.2] - 2026-11-03
+
+- SkinnedToStaticMesh追加
+
 ## [1.0.1] - 2026-10-31
 
 - v1.0.1 MissingAssetImporter追加
