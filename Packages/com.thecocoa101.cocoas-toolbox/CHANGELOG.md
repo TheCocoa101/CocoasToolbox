@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.5] - 2026-11-05
+
+- AnimationPathAdjuster追加
+
 ## [1.0.4] - 2026-11-05
 
 - Skinned Mesh Updater追加

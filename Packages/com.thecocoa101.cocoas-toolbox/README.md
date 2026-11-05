@@ -16,3 +16,5 @@ Unity 上部メニューの **`Tools > Cocoa's Toolbox`** から開けます。
   - ボーン変形や BlendShape で曲げて形を作った状態の SkinnedMeshRenderer を、見た目上の位置・形状を維持したままボーンなしの StaticMesh（MeshFilter + MeshRenderer / `.mesh`）へ変換します。複製生成・その場変換、指定ボーンへの追従配置、複数メッシュの1メッシュ結合に対応。
 - **Skinned Mesh Updater (Experimental)** (`Tools > Cocoa's Toolbox > Skinned Mesh Updater (Experimental)` / Hierarchy・SkinnedMeshRenderer 右クリック)
   - Blender等の外部ツールで編集・再エクスポートしたメッシュを既存の SkinnedMeshRenderer の Mesh 欄に置き換える際、座標系（軸回転）・スケール（×0.01 / ×100 等）・原点オフセット・ボーン順・バインドポーズ軸ズレによる表示破綻を Unity 側のみで自動補正します。シーン上でのリアルタイムプレビュー、新しい `.mesh` アセット作成、GUIDを維持した `.fbx` 上書き保存に対応。
+- **Animation Path Adjuster (Experimental)** (`Tools > Cocoa's Toolbox > Animation Path Adjuster (Experimental)` / Project 右クリック `Cocoa's Toolbox`)
+  - 複数の `.anim` ファイル（またはフォルダ・AnimatorController）をまとめて登録してパスを一括変更したり、1つの `.anim` 内の個別要素（シェイプキー・Active切替・マテリアル差替等）を複数選択してパスを書き換えられます。親階層の追加（`Body` → `○○/Body`）・削除・Hierarchyドロップ自動入力・基準アバターからの移動先パス自動探索に対応。
