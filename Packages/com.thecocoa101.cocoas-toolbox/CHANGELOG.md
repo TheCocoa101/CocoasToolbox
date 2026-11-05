@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.4] - 2026-11-05
+
+- Skinned Mesh Updater追加
+
 ## [1.0.3] - 2026-11-05
 
 - MissingAssetImporterの挙動変更⇒unitypackageを生成するようにした。

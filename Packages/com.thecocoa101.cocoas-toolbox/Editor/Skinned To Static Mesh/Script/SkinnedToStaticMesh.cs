@@ -143,15 +143,15 @@ public class SkinnedToStaticMesh : EditorWindow
     //  メニュー登録（Tools メニュー / Hierarchy 右クリック / Inspector コンテキスト）
     // ─────────────────────────────────────────────────────────
 
-    [MenuItem("Tools/Cocoa's Toolbox/Skinned To Static Mesh")]
+    [MenuItem("Tools/Cocoa's Toolbox/Skinned To Static Mesh (Experimental)")]
     public static void Open()
     {
-        var win = GetWindow<SkinnedToStaticMesh>(false, "Skinned To Static", true);
+        var win = GetWindow<SkinnedToStaticMesh>(false, "Skinned To Static (Experimental)", true);
         win.minSize = new Vector2(420f, 480f);
         win.Show();
     }
 
-    [MenuItem("GameObject/Cocoa's Toolbox/Skinned To Static Mesh", false, 20)]
+    [MenuItem("GameObject/Cocoa's Toolbox/Skinned To Static Mesh (Experimental)", false, 20)]
     private static void OpenFromHierarchyContext(MenuCommand command)
     {
         var selectedGOs = Selection.gameObjects;
@@ -159,7 +159,7 @@ public class SkinnedToStaticMesh : EditorWindow
             return;
 
         var targets = GetTargetGameObjectsFromContext(command);
-        var win = GetWindow<SkinnedToStaticMesh>(false, "Skinned To Static", true);
+        var win = GetWindow<SkinnedToStaticMesh>(false, "Skinned To Static (Experimental)", true);
         win.minSize = new Vector2(420f, 480f);
         win.Show();
         win.Focus();
@@ -174,7 +174,7 @@ public class SkinnedToStaticMesh : EditorWindow
         }
     }
 
-    [MenuItem("GameObject/Cocoa's Toolbox/Skinned To Static Mesh（クイック複製変換）", false, 21)]
+    [MenuItem("GameObject/Cocoa's Toolbox/Skinned To Static Mesh（クイック複製変換） (Experimental)", false, 21)]
     private static void QuickBakeFromHierarchyContext(MenuCommand command)
     {
         var selectedGOs = Selection.gameObjects;
@@ -185,7 +185,7 @@ public class SkinnedToStaticMesh : EditorWindow
         if (targets.Count == 0)
         {
             EditorUtility.DisplayDialog(
-                "Skinned To Static Mesh",
+                "Skinned To Static Mesh (Experimental)",
                 "変換対象の GameObject が選択されていません。",
                 "OK");
             return;
@@ -196,7 +196,7 @@ public class SkinnedToStaticMesh : EditorWindow
         if (sceneTargets.Count == 0)
         {
             EditorUtility.DisplayDialog(
-                "Skinned To Static Mesh",
+                "Skinned To Static Mesh (Experimental)",
                 "Project 内の Prefab アセットではなく、Hierarchy（Scene）上のオブジェクトを選択してください。",
                 "OK");
             return;
@@ -231,7 +231,7 @@ public class SkinnedToStaticMesh : EditorWindow
         if (smrs.Count == 0)
         {
             EditorUtility.DisplayDialog(
-                "Skinned To Static Mesh",
+                "Skinned To Static Mesh (Experimental)",
                 "選択されたオブジェクト（またはその子階層）に有効な SkinnedMeshRenderer が見つかりませんでした。",
                 "OK");
             return;
@@ -272,11 +272,11 @@ public class SkinnedToStaticMesh : EditorWindow
         }
     }
 
-    [MenuItem("CONTEXT/SkinnedMeshRenderer/Skinned To Static Mesh")]
+    [MenuItem("CONTEXT/SkinnedMeshRenderer/Skinned To Static Mesh (Experimental)")]
     private static void OpenFromSMRContext(MenuCommand command)
     {
         var smr = command.context as SkinnedMeshRenderer;
-        var win = GetWindow<SkinnedToStaticMesh>(false, "Skinned To Static", true);
+        var win = GetWindow<SkinnedToStaticMesh>(false, "Skinned To Static (Experimental)", true);
         win.minSize = new Vector2(420f, 480f);
         win.Show();
         win.Focus();
@@ -402,7 +402,7 @@ public class SkinnedToStaticMesh : EditorWindow
 
     private void DrawHeader()
     {
-        EditorGUILayout.LabelField("Skinned To Static Mesh", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Skinned To Static Mesh (Experimental)", EditorStyles.boldLabel);
         EditorGUILayout.LabelField("Cocoa's Toolbox", EditorStyles.miniLabel);
         var rect = GUILayoutUtility.GetRect(0f, 1f, GUILayout.ExpandWidth(true));
         EditorGUI.DrawRect(rect, EditorStyles.label.normal.textColor * 0.3f);
