@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -14,7 +15,8 @@ using UnityEngine;
 /// <summary>
 /// Missing Asset Importer — Cocoa's Toolbox
 /// Migrate先のプロジェクトにて、元プロジェクトから Import してきた Prefab で
-/// Missing になっている不足アセットを元プロジェクトから検索し、必要なファイルだけを追加する。
+/// Missing になっている不足アセットを元プロジェクトから検索し、
+/// unitypackage 化して Import Unity Package ウィンドウを表示する。
 /// </summary>
 public class MissingAssetImporter : EditorWindow
 {
@@ -24,6 +26,10 @@ public class MissingAssetImporter : EditorWindow
 
     private const string PREF_KEY_SOURCE_PATH = "CocoasToolbox.MissingAssetImporter.SourceProjectPath";
     private const string SESSION_PENDING_REIMPORT = "CocoasToolbox.MissingAssetImporter.PendingReimport";
+    private const string SESSION_PENDING_PACKAGE_NAME = "CocoasToolbox.MissingAssetImporter.PendingPackageName";
+    private const string SESSION_PENDING_IMPORT_STARTED = "CocoasToolbox.MissingAssetImporter.PendingImportStarted";
+
+    private static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(false);
 
     private static readonly Regex GuidRegex = new Regex(
         @"[\""']?guid[\""']?\s*:\s*[\""']?([0-9a-fA-F]{32})[\""']?",
@@ -54,11 +60,6 @@ public class MissingAssetImporter : EditorWindow
     private static readonly HashSet<string> ShaderCodeExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         ".shader", ".cginc", ".hlsl", ".glslinc", ".compute", ".raytrace"
-    };
-
-    private static readonly HashSet<string> ScriptExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        ".cs", ".dll", ".asmdef", ".asmref"
     };
 
     private static readonly HashSet<string> JsonGuidExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -139,6 +140,15 @@ public class MissingAssetImporter : EditorWindow
         public Dictionary<string, SourcePackageEntry> PackagesByGuid = new Dictionary<string, SourcePackageEntry>(StringComparer.OrdinalIgnoreCase);
     }
 
+    private class UnityPackageItemEntry
+    {
+        public string Guid;
+        public string DestAssetPath;
+        public string SourceFullPath;
+        public string MetaFullPath;
+        public bool IsDirectory;
+    }
+
     // ─────────────────────────────────────────────────────────
     //  シリアライズ状態（Domain Reload 後も維持）
     // ─────────────────────────────────────────────────────────
@@ -160,6 +170,10 @@ public class MissingAssetImporter : EditorWindow
     [SerializeField] private List<ImportedRecord> _importedRecords = new List<ImportedRecord>();
     [SerializeField] private List<PackageWarningRecord> _packageWarnings = new List<PackageWarningRecord>();
     [SerializeField] private List<UnresolvedRecord> _unresolvedRecords = new List<UnresolvedRecord>();
+
+    [SerializeField] private string _lastGeneratedPackagePath = "";
+    [SerializeField] private bool _lastPackageImported = false;
+    [SerializeField] private List<string> _pendingAffectedPaths = new List<string>();
 
     [SerializeField] private string _statusMessage = "";
     [SerializeField] private MessageType _statusType = MessageType.Info;
@@ -196,7 +210,7 @@ public class MissingAssetImporter : EditorWindow
     });
 
     // ─────────────────────────────────────────────────────────
-    //  メニュー登録・初期化
+    //  メニュー登録・初期化・パッケージインポート監視
     // ─────────────────────────────────────────────────────────
 
     [MenuItem("Tools/Cocoa's Toolbox/Missing Asset Importer")]
@@ -217,17 +231,100 @@ public class MissingAssetImporter : EditorWindow
     }
 
     /// <summary>
-    /// C# スクリプト (.cs / .dll) が追加されてコンパイル＆Domain Reloadが走った後、
-    /// 対象 Prefab 等を再インポートして Missing (Mono Script) を確実に復帰させる。
+    /// Import Unity Package ウィンドウからのインポート完了（および C# スクリプトのコンパイル＆Domain Reload 完了後）を監視し、
+    /// 対象 Prefab 等を再インポートして Missing 表示を確実に解消する。
     /// </summary>
     [InitializeOnLoadMethod]
-    private static void RegisterPostCompileReimport()
+    private static void RegisterPackageImportCallbacks()
     {
+        AssetDatabase.importPackageStarted -= OnImportPackageStarted;
+        AssetDatabase.importPackageStarted += OnImportPackageStarted;
+
+        AssetDatabase.importPackageCompleted -= OnImportPackageCompleted;
+        AssetDatabase.importPackageCompleted += OnImportPackageCompleted;
+
+        AssetDatabase.importPackageCancelled -= OnImportPackageCancelled;
+        AssetDatabase.importPackageCancelled += OnImportPackageCancelled;
+
+        AssetDatabase.importPackageFailed -= OnImportPackageFailed;
+        AssetDatabase.importPackageFailed += OnImportPackageFailed;
+
         EditorApplication.delayCall += RunPendingReimportsIfReady;
+    }
+
+    private static bool IsMatchingPendingPackage(string packageName)
+    {
+        string expected = SessionState.GetString(SESSION_PENDING_PACKAGE_NAME, "");
+        if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(packageName))
+            return false;
+
+        string expectedBase = Path.GetFileNameWithoutExtension(expected);
+        string incomingBase = Path.GetFileNameWithoutExtension(packageName);
+        return string.Equals(expectedBase, incomingBase, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void ClearPendingSessionState()
+    {
+        SessionState.EraseBool(SESSION_PENDING_IMPORT_STARTED);
+        SessionState.EraseString(SESSION_PENDING_PACKAGE_NAME);
+        SessionState.EraseString(SESSION_PENDING_REIMPORT);
+    }
+
+    private static void OnImportPackageStarted(string packageName)
+    {
+        if (!IsMatchingPendingPackage(packageName))
+            return;
+
+        SessionState.SetBool(SESSION_PENDING_IMPORT_STARTED, true);
+    }
+
+    private static void OnImportPackageCompleted(string packageName)
+    {
+        bool started = SessionState.GetBool(SESSION_PENDING_IMPORT_STARTED, false);
+        string expected = SessionState.GetString(SESSION_PENDING_PACKAGE_NAME, "");
+
+        if (!string.IsNullOrEmpty(expected) && !IsMatchingPendingPackage(packageName))
+            return;
+        if (string.IsNullOrEmpty(expected) && !started)
+            return;
+
+        SessionState.SetBool(SESSION_PENDING_IMPORT_STARTED, true);
+        SessionState.EraseString(SESSION_PENDING_PACKAGE_NAME);
+
+        if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+        {
+            NotifyOpenWindowsImported("unitypackage のインポートが完了しました。コンパイル後に Prefab の参照を更新します…", MessageType.Info);
+            EditorApplication.delayCall += RunPendingReimportsIfReady;
+        }
+        else
+        {
+            RunPendingReimportsIfReady();
+        }
+    }
+
+    private static void OnImportPackageCancelled(string packageName)
+    {
+        if (!IsMatchingPendingPackage(packageName))
+            return;
+
+        ClearPendingSessionState();
+        NotifyOpenWindowsStatus("unitypackage のインポートがキャンセルされました。結果欄の「インポート画面を開く」から再表示できます。", MessageType.Info);
+    }
+
+    private static void OnImportPackageFailed(string packageName, string errorMessage)
+    {
+        if (!IsMatchingPendingPackage(packageName))
+            return;
+
+        ClearPendingSessionState();
+        NotifyOpenWindowsStatus($"unitypackage のインポートに失敗しました: {errorMessage}", MessageType.Error);
     }
 
     private static void RunPendingReimportsIfReady()
     {
+        if (!SessionState.GetBool(SESSION_PENDING_IMPORT_STARTED, false))
+            return;
+
         if (EditorApplication.isCompiling || EditorApplication.isUpdating)
         {
             EditorApplication.delayCall += RunPendingReimportsIfReady;
@@ -235,18 +332,43 @@ public class MissingAssetImporter : EditorWindow
         }
 
         string raw = SessionState.GetString(SESSION_PENDING_REIMPORT, "");
-        if (string.IsNullOrEmpty(raw)) return;
+        ClearPendingSessionState();
 
-        SessionState.EraseString(SESSION_PENDING_REIMPORT);
+        if (!string.IsNullOrEmpty(raw))
+        {
+            var paths = raw.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-        var paths = raw.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            if (paths.Count > 0)
+            {
+                ReimportAssetPathsOrdered(paths);
+            }
+        }
 
-        if (paths.Count == 0) return;
-
-        ReimportAssetPathsOrdered(paths);
         InternalEditorUtility.RepaintAllViews();
+        NotifyOpenWindowsImported("unitypackage のインポートが完了し、Prefab の参照を更新しました。", MessageType.Info);
+    }
+
+    private static void NotifyOpenWindowsImported(string message, MessageType type)
+    {
+        var windows = Resources.FindObjectsOfTypeAll<MissingAssetImporter>();
+        foreach (var win in windows)
+        {
+            if (win == null) continue;
+            win._lastPackageImported = true;
+            win.SetStatus(message, type);
+        }
+    }
+
+    private static void NotifyOpenWindowsStatus(string message, MessageType type)
+    {
+        var windows = Resources.FindObjectsOfTypeAll<MissingAssetImporter>();
+        foreach (var win in windows)
+        {
+            if (win == null) continue;
+            win.SetStatus(message, type);
+        }
     }
 
     // ─────────────────────────────────────────────────────────
@@ -385,7 +507,7 @@ public class MissingAssetImporter : EditorWindow
             {
                 EditorGUILayout.HelpBox(
                     "Project 内の Prefab アセット（または Scene 上のオブジェクト）をセットして\n" +
-                    "「GET」ボタンを押すと、Missing になっている不足アセットだけを追加します。",
+                    "「GET」ボタンを押すと、不足アセットを unitypackage 化してインポート画面を開きます。",
                     MessageType.None);
             }
         }
@@ -471,21 +593,57 @@ public class MissingAssetImporter : EditorWindow
 
     private void DrawResultsSection()
     {
-        // 1. 追加されたアセット一覧
+        // 1. 検出・追加対象のアセット一覧
         if (_importedRecords != null && _importedRecords.Count > 0)
         {
-            _foldImported = EditorGUILayout.Foldout(
-                _foldImported, $"追加されたアセット ({_importedRecords.Count} 件)", true);
+            string sectionLabel = _lastPackageImported
+                ? $"追加されたアセット ({_importedRecords.Count} 件)"
+                : $"検出された不足アセット ({_importedRecords.Count} 件)";
+
+            _foldImported = EditorGUILayout.Foldout(_foldImported, sectionLabel, true);
 
             if (_foldImported)
             {
                 using (new EditorGUILayout.VerticalScope("box"))
                 {
+                    if (!string.IsNullOrEmpty(_lastGeneratedPackagePath) && File.Exists(_lastGeneratedPackagePath))
+                    {
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            string pkgStateLabel = _lastPackageImported
+                                ? "✓ インポート済み"
+                                : "unitypackage 生成済み";
+
+                            EditorGUILayout.LabelField(
+                                pkgStateLabel,
+                                EditorStyles.miniBoldLabel,
+                                GUILayout.MinWidth(40f),
+                                GUILayout.ExpandWidth(true));
+
+                            if (GUILayout.Button("インポート画面を開く", EditorStyles.miniButton, GUILayout.Width(118f)))
+                            {
+                                OpenImportPackageDialog(_lastGeneratedPackagePath, _pendingAffectedPaths);
+                                SetStatus("Import Unity Package ウィンドウを開きました。", MessageType.Info);
+                                GUIUtility.ExitGUI();
+                            }
+
+                            if (GUILayout.Button("別名で保存…", EditorStyles.miniButton, GUILayout.Width(76f)))
+                            {
+                                SaveGeneratedPackageAs(_lastGeneratedPackagePath);
+                                GUIUtility.ExitGUI();
+                            }
+                        }
+
+                        EditorGUILayout.Space(2f);
+                    }
+
+                    Texture fallbackIcon = EditorGUIUtility.IconContent("DefaultAsset Icon")?.image;
+
                     foreach (var rec in _importedRecords)
                     {
                         using (new EditorGUILayout.HorizontalScope())
                         {
-                            Texture icon = AssetDatabase.GetCachedIcon(rec.DestAssetPath);
+                            Texture icon = AssetDatabase.GetCachedIcon(rec.DestAssetPath) ?? fallbackIcon;
                             var content = new GUIContent(" " + rec.DestAssetPath, icon, $"GUID: {rec.Guid}\n元パス: {rec.SourceRelPath}");
 
                             if (GUILayout.Button(content, AssetRowStyle, GUILayout.MinWidth(40f), GUILayout.ExpandWidth(true), GUILayout.Height(18f)))
@@ -495,6 +653,10 @@ public class MissingAssetImporter : EditorWindow
                                 {
                                     EditorGUIUtility.PingObject(obj);
                                     Selection.activeObject = obj;
+                                }
+                                else
+                                {
+                                    SetStatus("まだプロジェクトにインポートされていません。インポート画面から Import を実行してください。", MessageType.Info);
                                 }
                             }
 
@@ -520,7 +682,7 @@ public class MissingAssetImporter : EditorWindow
                 {
                     EditorGUILayout.LabelField(
                         "以下の Missing 参照は元プロジェクトの Packages 内のアセットです。\n" +
-                        "重複エラー防止のため Assets へはコピーしていません。VCC / ALCOM 等からパッケージを導入してください。",
+                        "重複エラー防止のため unitypackage には含めていません。VCC / ALCOM 等からパッケージを導入してください。",
                         RichMiniStyle);
                     EditorGUILayout.Space(2f);
 
@@ -572,13 +734,17 @@ public class MissingAssetImporter : EditorWindow
     // ─────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Target Prefab と元プロジェクトを照合し、Missing になっている不足アセットだけを追加する。
+    /// Target Prefab と元プロジェクトを照合し、Missing になっている不足アセットを
+    /// unitypackage 化して Import Unity Package ウィンドウを開く。
     /// </summary>
     public void ExecuteGetMissingAssets()
     {
         _importedRecords.Clear();
         _packageWarnings.Clear();
         _unresolvedRecords.Clear();
+        _pendingAffectedPaths.Clear();
+        _lastGeneratedPackagePath = "";
+        _lastPackageImported = false;
 
         if (!TryValidateSourceProject(_sourceProjectInput, out string srcProjectRoot, out string srcAssetsRoot, out string err))
         {
@@ -598,6 +764,8 @@ public class MissingAssetImporter : EditorWindow
             return;
         }
 
+        string packagePathToOpen = null;
+
         try
         {
             // 1. 元プロジェクトの GUID インデックス取得（未構築なら構築）
@@ -607,91 +775,63 @@ public class MissingAssetImporter : EditorWindow
             var allPackageHits = new Dictionary<string, PackageWarningRecord>(StringComparer.OrdinalIgnoreCase);
             var allUnresolved = new Dictionary<string, UnresolvedRecord>(StringComparer.OrdinalIgnoreCase);
             var allAffectedCurrentPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            bool anyScriptImported = false;
 
-            // バイナリアセット経由の依存も取りこぼさないよう最大3パスまで確認（通常のYAMLは1パスで完結）
-            int maxPasses = _includeTransitiveDeps ? 3 : 1;
-            for (int pass = 0; pass < maxPasses; pass++)
+            EditorUtility.DisplayProgressBar(
+                "Missing Asset Importer",
+                "Missing 参照を解析しています...",
+                0.25f);
+
+            // 2. 現在プロジェクトの Target Prefab から Missing GUID を収集
+            CollectMissingFromTarget(
+                _targetPrefab,
+                _scanExistingDependencies,
+                index,
+                out Dictionary<string, HashSet<string>> missingGuidReferrers,
+                out Dictionary<string, string> missingGuidContext,
+                out HashSet<string> targetAssetPaths);
+
+            foreach (var tp in targetAssetPaths)
+                allAffectedCurrentPaths.Add(tp);
+
+            EditorUtility.DisplayProgressBar(
+                "Missing Asset Importer",
+                "元プロジェクトから不足アセットを収集しています...",
+                0.45f);
+
+            // 3. 元プロジェクト内で解決 ＆ 連鎖依存アセットを収集
+            ResolveInSourceProject(
+                missingGuidReferrers,
+                missingGuidContext,
+                index,
+                _includeTransitiveDeps,
+                out List<(SourceAssetEntry entry, bool isDirect)> resolvedToPackage,
+                allPackageHits,
+                allUnresolved);
+
+            // 参照元となっていた現在プロジェクトのアセットをインポート後の再更新対象に記録
+            foreach (var kv in missingGuidReferrers)
             {
-                EditorUtility.DisplayProgressBar(
-                    "Missing Asset Importer",
-                    "Missing 参照を解析しています...",
-                    0.25f + pass * 0.2f);
-
-                // 2. 現在プロジェクトの Target Prefab から Missing GUID を収集
-                CollectMissingFromTarget(
-                    _targetPrefab,
-                    _scanExistingDependencies,
-                    index,
-                    out Dictionary<string, HashSet<string>> missingGuidReferrers,
-                    out Dictionary<string, string> missingGuidContext,
-                    out HashSet<string> targetAssetPaths);
-
-                foreach (var tp in targetAssetPaths)
-                    allAffectedCurrentPaths.Add(tp);
-
-                // 3. 元プロジェクト内で解決 ＆ 連鎖依存アセットを収集
-                ResolveInSourceProject(
-                    missingGuidReferrers,
-                    missingGuidContext,
-                    index,
-                    _includeTransitiveDeps,
-                    out List<(SourceAssetEntry entry, bool isDirect)> toImportThisPass,
-                    allPackageHits,
-                    allUnresolved);
-
-                // 既に今セッションでインポート済みのものを除外
-                toImportThisPass.RemoveAll(item => allImportedByGuid.ContainsKey(item.entry.Guid));
-
-                if (toImportThisPass.Count == 0)
-                    break;
-
-                // 参照元となっていた現在プロジェクトのアセットを再インポート対象に記録
-                foreach (var kv in missingGuidReferrers)
+                if (index.AssetsByGuid.ContainsKey(kv.Key))
                 {
-                    if (index.AssetsByGuid.ContainsKey(kv.Key))
-                    {
-                        foreach (var refPath in kv.Value)
-                            allAffectedCurrentPaths.Add(refPath);
-                    }
+                    foreach (var refPath in kv.Value)
+                        allAffectedCurrentPaths.Add(refPath);
                 }
+            }
 
-                // 4. ファイルと .meta をコピーして AssetDatabase.Refresh
-                CopyAssetsFromSource(
-                    toImportThisPass,
+            // 4. 検出された不足アセットを .unitypackage として生成
+            if (resolvedToPackage.Count > 0)
+            {
+                packagePathToOpen = BuildUnityPackageFromSource(
+                    resolvedToPackage,
                     index,
                     allImportedByGuid,
-                    allAffectedCurrentPaths,
-                    ref anyScriptImported);
+                    allAffectedCurrentPaths);
 
-                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-
-                if (anyScriptImported)
-                {
-                    // スクリプト追加時はコンパイル完了を待つ必要があるためループ終了
-                    break;
-                }
+                _lastGeneratedPackagePath = packagePathToOpen ?? "";
+                _pendingAffectedPaths = allAffectedCurrentPaths.ToList();
             }
 
-            EditorUtility.DisplayProgressBar("Missing Asset Importer", "Prefab の参照を更新しています...", 0.9f);
-
-            // 5. 対象 Prefab および参照元アセットを再インポートして Missing 表示を即時解消
-            if (allImportedByGuid.Count > 0)
-            {
-                if (anyScriptImported || EditorApplication.isCompiling)
-                {
-                    SessionState.SetString(
-                        SESSION_PENDING_REIMPORT,
-                        string.Join("\n", allAffectedCurrentPaths));
-                }
-                else
-                {
-                    ReimportAssetPathsOrdered(allAffectedCurrentPaths);
-                    InternalEditorUtility.RepaintAllViews();
-                }
-            }
-
-            // 6. UI 表示用にリスト整形
+            // 5. UI 表示用にリスト整形
             _importedRecords = allImportedByGuid.Values
                 .OrderByDescending(r => r.IsDirect)
                 .ThenBy(r => r.DestAssetPath, StringComparer.OrdinalIgnoreCase)
@@ -709,21 +849,76 @@ public class MissingAssetImporter : EditorWindow
             _foldImported = _importedRecords.Count > 0;
             _foldPackages = _packageWarnings.Count > 0;
 
-            // 7. ステータスメッセージ生成
-            BuildCompletionStatus(anyScriptImported);
+            // 6. ステータスメッセージ生成
+            BuildCompletionStatus();
         }
         catch (Exception ex)
         {
             SetStatus($"エラーが発生しました: {ex.Message}", MessageType.Error);
             Debug.LogException(ex);
+            packagePathToOpen = null;
         }
         finally
         {
             EditorUtility.ClearProgressBar();
         }
+
+        // 7. プログレスバーを閉じた後に Import Unity Package ウィンドウを開く
+        if (!string.IsNullOrEmpty(packagePathToOpen) && File.Exists(packagePathToOpen))
+        {
+            OpenImportPackageDialog(packagePathToOpen, _pendingAffectedPaths);
+        }
     }
 
-    private void BuildCompletionStatus(bool anyScriptImported)
+    private static void OpenImportPackageDialog(string packagePath, IEnumerable<string> affectedPaths)
+    {
+        if (string.IsNullOrEmpty(packagePath) || !File.Exists(packagePath))
+            return;
+
+        string pkgName = Path.GetFileNameWithoutExtension(packagePath);
+        string joinedPaths = affectedPaths != null
+            ? string.Join("\n", affectedPaths.Where(p => !string.IsNullOrEmpty(p)).Distinct(StringComparer.OrdinalIgnoreCase))
+            : "";
+
+        SessionState.SetString(SESSION_PENDING_PACKAGE_NAME, pkgName);
+        SessionState.SetString(SESSION_PENDING_REIMPORT, joinedPaths);
+        SessionState.SetBool(SESSION_PENDING_IMPORT_STARTED, false);
+
+        AssetDatabase.ImportPackage(packagePath, true);
+    }
+
+    private void SaveGeneratedPackageAs(string sourcePackagePath)
+    {
+        if (string.IsNullOrEmpty(sourcePackagePath) || !File.Exists(sourcePackagePath))
+        {
+            SetStatus("保存元の unitypackage ファイルが見つかりません。再度 GET を実行してください。", MessageType.Warning);
+            return;
+        }
+
+        string defaultName = Path.GetFileName(sourcePackagePath);
+        string initialDir = Directory.GetParent(Application.dataPath)?.FullName ?? "";
+        string savePath = EditorUtility.SaveFilePanel(
+            "unitypackage を保存",
+            initialDir,
+            defaultName,
+            "unitypackage");
+
+        if (string.IsNullOrEmpty(savePath))
+            return;
+
+        try
+        {
+            CopyFileShared(sourcePackagePath, savePath);
+            SetStatus($"unitypackage を保存しました: {savePath}", MessageType.Info);
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"unitypackage の保存に失敗しました: {ex.Message}", MessageType.Error);
+            Debug.LogException(ex);
+        }
+    }
+
+    private void BuildCompletionStatus()
     {
         int importedCount = _importedRecords.Count;
         int pkgCount = _packageWarnings.Count;
@@ -737,12 +932,10 @@ public class MissingAssetImporter : EditorWindow
 
         var parts = new List<string>();
         if (importedCount > 0)
-            parts.Add($"{importedCount} 件の不足アセットを追加しました");
+            parts.Add($"{importedCount} 件の不足アセットを unitypackage 化しました。インポート画面から Import してください");
         else
             parts.Add("Assets から追加可能な不足ファイルはありませんでした");
 
-        if (anyScriptImported)
-            parts.Add("スクリプトのコンパイル完了後に自動で Prefab を再更新します");
         if (pkgCount > 0)
             parts.Add($"不足パッケージ {pkgCount} 件あり");
         if (unresolvedCount > 0)
@@ -1698,83 +1891,392 @@ public class MissingAssetImporter : EditorWindow
     }
 
     // ─────────────────────────────────────────────────────────
-    //  Step 4: 安全なアセット＆.meta コピー処理
+    //  Step 4: .unitypackage アーカイブ生成処理
     // ─────────────────────────────────────────────────────────
 
-    private void CopyAssetsFromSource(
+    private string BuildUnityPackageFromSource(
         List<(SourceAssetEntry entry, bool isDirect)> itemsToImport,
         SourceProjectIndex sourceIndex,
         Dictionary<string, ImportedRecord> allImportedByGuid,
-        HashSet<string> allAffectedCurrentPaths,
-        ref bool anyScriptImported)
+        HashSet<string> allAffectedCurrentPaths)
     {
         string currentProjectRoot = Directory.GetParent(Application.dataPath)?.FullName ?? "";
-        int total = itemsToImport.Count;
+        var reservedDestPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var packagedGuids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var packageEntries = new List<UnityPackageItemEntry>(itemsToImport.Count * 2);
 
-        AssetDatabase.StartAssetEditing();
+        for (int i = 0; i < itemsToImport.Count; i++)
+        {
+            var (srcEntry, isDirect) = itemsToImport[i];
+            if (srcEntry == null || string.IsNullOrEmpty(srcEntry.Guid))
+                continue;
+
+            if (!srcEntry.IsDirectory && !File.Exists(srcEntry.FullPath))
+                continue;
+            if (srcEntry.IsDirectory && !Directory.Exists(srcEntry.FullPath))
+                continue;
+
+            if (!packagedGuids.Add(srcEntry.Guid))
+                continue;
+
+            string desiredAssetPath = ComputeDesiredDestPath(srcEntry.RelPath);
+            string finalAssetPath = ResolveConflictSafePath(
+                desiredAssetPath,
+                srcEntry.Guid,
+                currentProjectRoot,
+                reservedDestPaths,
+                out bool renamed);
+
+            reservedDestPaths.Add(finalAssetPath);
+
+            string parentAssetDir = srcEntry.IsDirectory
+                ? (Path.GetDirectoryName(finalAssetPath)?.Replace('\\', '/') ?? "Assets")
+                : (Path.GetDirectoryName(finalAssetPath)?.Replace('\\', '/') ?? "Assets");
+
+            if (_destMode == DestinationMode.KeepOriginalStructure)
+            {
+                CollectParentFolderEntriesForPackage(
+                    parentAssetDir,
+                    currentProjectRoot,
+                    sourceIndex,
+                    packagedGuids,
+                    reservedDestPaths,
+                    packageEntries);
+            }
+
+            if (!srcEntry.IsDirectory &&
+                string.Equals(Path.GetExtension(finalAssetPath), ".prefab", StringComparison.OrdinalIgnoreCase))
+            {
+                allAffectedCurrentPaths.Add(finalAssetPath);
+            }
+
+            packageEntries.Add(new UnityPackageItemEntry
+            {
+                Guid = srcEntry.Guid,
+                DestAssetPath = finalAssetPath,
+                SourceFullPath = srcEntry.IsDirectory ? null : srcEntry.FullPath,
+                MetaFullPath = srcEntry.MetaFullPath,
+                IsDirectory = srcEntry.IsDirectory
+            });
+
+            allImportedByGuid[srcEntry.Guid] = new ImportedRecord
+            {
+                Guid = srcEntry.Guid,
+                DestAssetPath = finalAssetPath,
+                SourceRelPath = srcEntry.RelPath,
+                IsDirect = isDirect,
+                RenamedForConflict = renamed
+            };
+        }
+
+        if (packageEntries.Count == 0)
+            return null;
+
+        string tempPkgDir = Path.Combine(currentProjectRoot, "Temp", "MissingAssetImporter");
+        Directory.CreateDirectory(tempPkgDir);
+
+        string safeTargetName = SanitizeFileName(_targetPrefab != null ? _targetPrefab.name : "MissingAssets");
+        string preferredPath = Path.Combine(tempPkgDir, $"{safeTargetName}_MissingAssets.unitypackage");
+        string outputPackagePath = preferredPath;
+
         try
         {
-            for (int i = 0; i < total; i++)
+            if (File.Exists(preferredPath))
             {
-                var (srcEntry, isDirect) = itemsToImport[i];
-
-                EditorUtility.DisplayProgressBar(
-                    "Missing Asset Importer",
-                    $"コピー中 ({i + 1}/{total}): {Path.GetFileName(srcEntry.RelPath)}",
-                    0.45f + 0.4f * ((float)(i + 1) / total));
-
-                string desiredAssetPath = ComputeDesiredDestPath(srcEntry.RelPath);
-                string finalAssetPath = ResolveConflictSafePath(desiredAssetPath, srcEntry.Guid, currentProjectRoot, out bool renamed);
-                string finalFullPath = Path.Combine(currentProjectRoot, finalAssetPath.Replace('/', Path.DirectorySeparatorChar));
-
-                if (srcEntry.IsDirectory)
-                {
-                    EnsureParentDirectoriesWithSafeMetas(finalAssetPath, currentProjectRoot, sourceIndex);
-                    if (!Directory.Exists(finalFullPath))
-                    {
-                        Directory.CreateDirectory(finalFullPath);
-                        if (File.Exists(srcEntry.MetaFullPath) && !File.Exists(finalFullPath + ".meta"))
-                        {
-                            CopyFileShared(srcEntry.MetaFullPath, finalFullPath + ".meta");
-                        }
-                    }
-                }
-                else
-                {
-                    string parentAssetDir = Path.GetDirectoryName(finalAssetPath)?.Replace('\\', '/') ?? "Assets";
-                    EnsureParentDirectoriesWithSafeMetas(parentAssetDir, currentProjectRoot, sourceIndex);
-
-                    CopyFileShared(srcEntry.FullPath, finalFullPath);
-                    if (File.Exists(srcEntry.MetaFullPath))
-                    {
-                        CopyFileShared(srcEntry.MetaFullPath, finalFullPath + ".meta");
-                    }
-
-                    string ext = Path.GetExtension(finalFullPath);
-                    if (ScriptExtensions.Contains(ext))
-                    {
-                        anyScriptImported = true;
-                    }
-                    if (string.Equals(ext, ".prefab", StringComparison.OrdinalIgnoreCase))
-                    {
-                        allAffectedCurrentPaths.Add(finalAssetPath);
-                    }
-                }
-
-                allImportedByGuid[srcEntry.Guid] = new ImportedRecord
-                {
-                    Guid = srcEntry.Guid,
-                    DestAssetPath = finalAssetPath,
-                    SourceRelPath = srcEntry.RelPath,
-                    IsDirect = isDirect,
-                    RenamedForConflict = renamed
-                };
+                File.Delete(preferredPath);
             }
         }
-        finally
+        catch (IOException)
         {
-            AssetDatabase.StopAssetEditing();
+            outputPackagePath = Path.Combine(tempPkgDir, $"{safeTargetName}_MissingAssets_{DateTime.Now:HHmmss}.unitypackage");
         }
+
+        WriteUnityPackageArchive(outputPackagePath, packageEntries);
+        return outputPackagePath;
+    }
+
+    /// <summary>
+    /// 元プロジェクトのフォルダ構成を維持する場合、新規作成される親フォルダに限り、
+    /// GUID 競合がなければフォルダの .meta エントリも unitypackage に含める（既存フォルダの .meta は変更しない）。
+    /// </summary>
+    private static void CollectParentFolderEntriesForPackage(
+        string assetFolderRelPath,
+        string currentProjectRoot,
+        SourceProjectIndex sourceIndex,
+        HashSet<string> packagedGuids,
+        HashSet<string> reservedDestPaths,
+        List<UnityPackageItemEntry> packageEntries)
+    {
+        if (string.IsNullOrEmpty(assetFolderRelPath))
+            return;
+
+        string[] parts = assetFolderRelPath.Replace('\\', '/').Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length <= 1)
+            return; // "Assets" のみ
+
+        string accumRel = parts[0]; // "Assets"
+        for (int i = 1; i < parts.Length; i++)
+        {
+            accumRel += "/" + parts[i];
+            if (reservedDestPaths.Contains(accumRel))
+                continue;
+
+            string fullDir = Path.Combine(currentProjectRoot, accumRel.Replace('/', Path.DirectorySeparatorChar));
+            if (Directory.Exists(fullDir) || File.Exists(fullDir) || File.Exists(fullDir + ".meta"))
+                continue;
+
+            string srcMetaCandidate = Path.Combine(
+                sourceIndex.ProjectRoot,
+                accumRel.Replace('/', Path.DirectorySeparatorChar)) + ".meta";
+
+            if (!File.Exists(srcMetaCandidate))
+                continue;
+
+            if (!TryReadOwnGuidFromMeta(srcMetaCandidate, out string folderGuid))
+                continue;
+
+            if (ExistsInCurrentProject(folderGuid, out _))
+                continue;
+
+            if (!packagedGuids.Add(folderGuid))
+                continue;
+
+            reservedDestPaths.Add(accumRel);
+            packageEntries.Add(new UnityPackageItemEntry
+            {
+                Guid = folderGuid,
+                DestAssetPath = accumRel,
+                SourceFullPath = null,
+                MetaFullPath = srcMetaCandidate,
+                IsDirectory = true
+            });
+        }
+    }
+
+    private static void WriteUnityPackageArchive(string outputPackagePath, List<UnityPackageItemEntry> entries)
+    {
+        byte[] copyBuffer = new byte[81920];
+        byte[] zeroPadding = new byte[1024];
+        long unixMtime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        int total = entries.Count;
+
+        try
+        {
+            using (var fs = new FileStream(outputPackagePath, FileMode.Create, FileAccess.Write, FileShare.Read))
+            using (var gz = new GZipStream(fs, System.IO.Compression.CompressionLevel.Fastest))
+            {
+                for (int i = 0; i < total; i++)
+                {
+                    UnityPackageItemEntry entry = entries[i];
+
+                    EditorUtility.DisplayProgressBar(
+                        "Missing Asset Importer",
+                        $"unitypackage を作成中 ({i + 1}/{total}): {Path.GetFileName(entry.DestAssetPath)}",
+                        0.5f + 0.45f * ((float)(i + 1) / total));
+
+                    string guid = entry.Guid.ToLowerInvariant();
+                    WriteTarHeader(gz, guid + "/", 0L, (byte)'5', unixMtime);
+
+                    byte[] pathBytes = Utf8NoBom.GetBytes(entry.DestAssetPath.Replace('\\', '/'));
+                    WriteTarBytesEntry(gz, guid + "/pathname", pathBytes, zeroPadding, unixMtime);
+
+                    if (!entry.IsDirectory && !string.IsNullOrEmpty(entry.SourceFullPath))
+                    {
+                        WriteTarFileEntry(gz, guid + "/asset", entry.SourceFullPath, copyBuffer, zeroPadding, unixMtime);
+                    }
+
+                    if (!string.IsNullOrEmpty(entry.MetaFullPath) && File.Exists(entry.MetaFullPath))
+                    {
+                        WriteTarFileEntry(gz, guid + "/asset.meta", entry.MetaFullPath, copyBuffer, zeroPadding, unixMtime);
+                    }
+                    else
+                    {
+                        byte[] fallbackMeta = BuildFallbackMetaBytes(guid, entry.IsDirectory);
+                        WriteTarBytesEntry(gz, guid + "/asset.meta", fallbackMeta, zeroPadding, unixMtime);
+                    }
+                }
+
+                // POSIX / USTAR 終端ブロック（512 bytes × 2 のゼロ領域）
+                gz.Write(zeroPadding, 0, 1024);
+            }
+        }
+        catch
+        {
+            try
+            {
+                if (File.Exists(outputPackagePath))
+                    File.Delete(outputPackagePath);
+            }
+            catch
+            {
+                // 削除失敗は無視して元例外を送出
+            }
+            throw;
+        }
+    }
+
+    private static void WriteTarHeader(Stream tarStream, string entryName, long fileSize, byte typeFlag, long unixMtime)
+    {
+        byte[] header = new byte[512];
+
+        int nameLen = Math.Min(entryName.Length, 100);
+        for (int i = 0; i < nameLen; i++)
+        {
+            header[i] = (byte)entryName[i];
+        }
+
+        WriteTarOctal(header, typeFlag == (byte)'5' ? 493L : 420L, 100, 8); // 0755 or 0644
+        WriteTarOctal(header, 0L, 108, 8);                                  // uid
+        WriteTarOctal(header, 0L, 116, 8);                                  // gid
+        WriteTarOctal(header, fileSize, 124, 12);                           // size
+        WriteTarOctal(header, unixMtime, 136, 12);                          // mtime
+
+        // チェックサム計算用に 148..155 を空白で初期化
+        for (int i = 148; i < 156; i++)
+        {
+            header[i] = (byte)' ';
+        }
+
+        header[156] = typeFlag;
+
+        // USTAR マジック ("ustar\0" + "00")
+        header[257] = (byte)'u';
+        header[258] = (byte)'s';
+        header[259] = (byte)'t';
+        header[260] = (byte)'a';
+        header[261] = (byte)'r';
+        header[262] = 0;
+        header[263] = (byte)'0';
+        header[264] = (byte)'0';
+
+        long checksum = 0;
+        for (int i = 0; i < 512; i++)
+        {
+            checksum += header[i];
+        }
+
+        string chkOctal = Convert.ToString(checksum, 8).PadLeft(6, '0');
+        for (int i = 0; i < 6; i++)
+        {
+            header[148 + i] = (byte)chkOctal[i];
+        }
+        header[154] = 0;
+        header[155] = (byte)' ';
+
+        tarStream.Write(header, 0, 512);
+    }
+
+    private static void WriteTarOctal(byte[] header, long value, int offset, int length)
+    {
+        if (length == 12 && value > 0x1FFFFFFFFL)
+        {
+            // 8GB 超ファイル向けの GNU base-256 バイナリサイズ表現
+            header[offset] = 0x80;
+            for (int i = 0; i < 8; i++)
+            {
+                header[offset + 11 - i] = (byte)(value & 0xFF);
+                value >>= 8;
+            }
+            return;
+        }
+
+        string octal = Convert.ToString(Math.Max(0L, value), 8);
+        int digitsWidth = length - 1;
+        if (octal.Length > digitsWidth)
+        {
+            octal = octal.Substring(octal.Length - digitsWidth);
+        }
+        else if (octal.Length < digitsWidth)
+        {
+            octal = octal.PadLeft(digitsWidth, '0');
+        }
+
+        for (int i = 0; i < digitsWidth; i++)
+        {
+            header[offset + i] = (byte)octal[i];
+        }
+        header[offset + digitsWidth] = 0;
+    }
+
+    private static void WriteTarBytesEntry(
+        Stream tarStream,
+        string entryName,
+        byte[] content,
+        byte[] zeroPadding,
+        long unixMtime)
+    {
+        WriteTarHeader(tarStream, entryName, content.Length, (byte)'0', unixMtime);
+        if (content.Length > 0)
+        {
+            tarStream.Write(content, 0, content.Length);
+            int remainder = content.Length % 512;
+            if (remainder != 0)
+            {
+                tarStream.Write(zeroPadding, 0, 512 - remainder);
+            }
+        }
+    }
+
+    private static void WriteTarFileEntry(
+        Stream tarStream,
+        string entryName,
+        string sourceFilePath,
+        byte[] copyBuffer,
+        byte[] zeroPadding,
+        long unixMtime)
+    {
+        using (var inStream = new FileStream(sourceFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+        {
+            long fileLength = inStream.Length;
+            WriteTarHeader(tarStream, entryName, fileLength, (byte)'0', unixMtime);
+
+            long remaining = fileLength;
+            while (remaining > 0)
+            {
+                int toRead = (int)Math.Min(copyBuffer.Length, remaining);
+                int read = inStream.Read(copyBuffer, 0, toRead);
+                if (read <= 0)
+                {
+                    int fill = (int)Math.Min(zeroPadding.Length, remaining);
+                    tarStream.Write(zeroPadding, 0, fill);
+                    remaining -= fill;
+                    continue;
+                }
+
+                tarStream.Write(copyBuffer, 0, read);
+                remaining -= read;
+            }
+
+            int remainder = (int)(fileLength % 512L);
+            if (remainder != 0)
+            {
+                tarStream.Write(zeroPadding, 0, 512 - remainder);
+            }
+        }
+    }
+
+    private static byte[] BuildFallbackMetaBytes(string guid, bool isDirectory)
+    {
+        string meta = isDirectory
+            ? $"fileFormatVersion: 2\nguid: {guid}\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {{}}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
+            : $"fileFormatVersion: 2\nguid: {guid}\nDefaultImporter:\n  externalObjects: {{}}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n";
+        return Utf8NoBom.GetBytes(meta);
+    }
+
+    private static string SanitizeFileName(string rawName)
+    {
+        if (string.IsNullOrWhiteSpace(rawName))
+            return "MissingAssets";
+
+        char[] invalid = Path.GetInvalidFileNameChars();
+        var sb = new StringBuilder(rawName.Length);
+        foreach (char c in rawName.Trim())
+        {
+            sb.Append(Array.IndexOf(invalid, c) >= 0 ? '_' : c);
+        }
+
+        string cleaned = sb.ToString().Trim();
+        return string.IsNullOrEmpty(cleaned) ? "MissingAssets" : cleaned;
     }
 
     private string ComputeDesiredDestPath(string srcRelPath)
@@ -1799,25 +2301,30 @@ public class MissingAssetImporter : EditorWindow
         string desiredAssetPath,
         string incomingGuid,
         string currentProjectRoot,
+        HashSet<string> reservedDestPaths,
         out bool renamed)
     {
         renamed = false;
         string fullDesired = Path.Combine(currentProjectRoot, desiredAssetPath.Replace('/', Path.DirectorySeparatorChar));
+        bool reservedAlready = reservedDestPaths != null && reservedDestPaths.Contains(desiredAssetPath);
 
-        if (!File.Exists(fullDesired) && !Directory.Exists(fullDesired))
+        if (!reservedAlready && !File.Exists(fullDesired) && !Directory.Exists(fullDesired))
         {
             return desiredAssetPath;
         }
 
-        string existingGuid = AssetDatabase.AssetPathToGUID(desiredAssetPath);
-        if (string.IsNullOrEmpty(existingGuid) && File.Exists(fullDesired + ".meta"))
+        if (!reservedAlready)
         {
-            TryReadOwnGuidFromMeta(fullDesired + ".meta", out existingGuid);
-        }
+            string existingGuid = AssetDatabase.AssetPathToGUID(desiredAssetPath);
+            if (string.IsNullOrEmpty(existingGuid) && File.Exists(fullDesired + ".meta"))
+            {
+                TryReadOwnGuidFromMeta(fullDesired + ".meta", out existingGuid);
+            }
 
-        if (string.Equals(existingGuid, incomingGuid, StringComparison.OrdinalIgnoreCase))
-        {
-            return desiredAssetPath;
+            if (string.Equals(existingGuid, incomingGuid, StringComparison.OrdinalIgnoreCase))
+            {
+                return desiredAssetPath;
+            }
         }
 
         // 別アセットが同名で存在するため、ユニークな別名にして既存アセットの上書きを防止
@@ -1830,53 +2337,18 @@ public class MissingAssetImporter : EditorWindow
         while (true)
         {
             string candidate = $"{dir}/{baseName} ({counter}){ext}";
+            if (reservedDestPaths != null && reservedDestPaths.Contains(candidate))
+            {
+                counter++;
+                continue;
+            }
+
             string candidateFull = Path.Combine(currentProjectRoot, candidate.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(candidateFull) && !Directory.Exists(candidateFull) && !File.Exists(candidateFull + ".meta"))
             {
                 return candidate;
             }
             counter++;
-        }
-    }
-
-    /// <summary>
-    /// 親フォルダを順次作成する。新規作成されるフォルダに限り、元プロジェクトのフォルダ GUID が
-    /// 競合しなければフォルダの .meta も引き継ぐ（既存フォルダの .meta は絶対に上書きしない）。
-    /// </summary>
-    private void EnsureParentDirectoriesWithSafeMetas(
-        string assetFolderRelPath,
-        string currentProjectRoot,
-        SourceProjectIndex sourceIndex)
-    {
-        if (string.IsNullOrEmpty(assetFolderRelPath)) return;
-
-        string[] parts = assetFolderRelPath.Replace('\\', '/').Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length <= 1) return; // "Assets" のみ
-
-        string accumRel = parts[0]; // "Assets"
-        for (int i = 1; i < parts.Length; i++)
-        {
-            accumRel += "/" + parts[i];
-            string fullDir = Path.Combine(currentProjectRoot, accumRel.Replace('/', Path.DirectorySeparatorChar));
-            if (Directory.Exists(fullDir))
-                continue;
-
-            Directory.CreateDirectory(fullDir);
-
-            if (_destMode == DestinationMode.KeepOriginalStructure)
-            {
-                string srcMetaCandidate = Path.Combine(
-                    sourceIndex.ProjectRoot,
-                    accumRel.Replace('/', Path.DirectorySeparatorChar)) + ".meta";
-
-                if (File.Exists(srcMetaCandidate) &&
-                    TryReadOwnGuidFromMeta(srcMetaCandidate, out string folderGuid) &&
-                    !ExistsInCurrentProject(folderGuid, out _) &&
-                    !File.Exists(fullDir + ".meta"))
-                {
-                    CopyFileShared(srcMetaCandidate, fullDir + ".meta");
-                }
-            }
         }
     }
 
