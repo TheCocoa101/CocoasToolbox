@@ -18,3 +18,7 @@ Unity 上部メニューの **`Tools > Cocoa's Toolbox`** から開けます。
   - Blender等の外部ツールで編集・再エクスポートしたメッシュを既存の SkinnedMeshRenderer の Mesh 欄に置き換える際、座標系（軸回転）・スケール（×0.01 / ×100 等）・原点オフセット・ボーン順・バインドポーズ軸ズレによる表示破綻を Unity 側のみで自動補正します。シーン上でのリアルタイムプレビュー、新しい `.mesh` アセット作成、GUIDを維持した `.fbx` 上書き保存に対応。
 - **Animation Path Adjuster (Experimental)** (`Tools > Cocoa's Toolbox > Animation Path Adjuster (Experimental)` / Project 右クリック `Cocoa's Toolbox`)
   - 複数の `.anim` ファイル（またはフォルダ・AnimatorController）をまとめて登録してパスを一括変更したり、1つの `.anim` 内の個別要素（シェイプキー・Active切替・マテリアル差替等）を複数選択してパスを書き換えられます。親階層の追加（`Body` → `○○/Body`）・削除・Hierarchyドロップ自動入力・基準アバターからの移動先パス自動探索に対応。
+- **Hair Mesh Color Changer (Experimental)** (`Tools > Cocoa's Toolbox > Hair Mesh Color Changer (Experimental)` / Hierarchy 右クリック `Cocoa's Toolbox`)
+  - 髪メッシュの一本一本（アイランド / 房）を SceneView 上でクリック選択（Blender の編集モード `L` キー風リンク選択）し、4つの基本色彩調整スライダー（色相・彩度・明度・コントラスト）で部分的に髪色を変更したり、lilToon 用のマスクテクスチャ（`.png`）を生成・自動設定できます。クリックと同時に選択箇所の UV がハイライトされるリアルタイム・テクスチャビュワー付き。
+- **Hair Mesh Deleter (Experimental)** (`Tools > Cocoa's Toolbox > Hair Mesh Deleter (Experimental)` / Hierarchy 右クリック `Cocoa's Toolbox`)
+  - 髪メッシュの一本一本を SceneView 上でクリック選択（`L` キー風リンク選択）し、リアルタイムに削除プレビュー確認しながら部分削除して、ボーンウェイト・BlendShape・全UVを維持した新しい `.mesh` アセットとして非破壊保存します。リアルタイム・テクスチャビュワー付き。
