@@ -25,7 +25,7 @@ public class HairMeshDeleter : EditorWindow
     //  定数・列挙型
     // ─────────────────────────────────────────────────────────
 
-    private const string WINDOW_TITLE = "Hair Mesh Deleter (Experimental)";
+    private const string WINDOW_TITLE = "Hair Mesh Deleter";
     private const string DEFAULT_SAVE_DIR = "Assets/DeletedHairMeshes";
     private const string DELETED_MESH_SUFFIX = "_Deleted-";
 
@@ -152,7 +152,7 @@ public class HairMeshDeleter : EditorWindow
     //  メニュー登録
     // ─────────────────────────────────────────────────────────
 
-    [MenuItem("Tools/Cocoa's Toolbox/Hair Mesh Deleter (Experimental)")]
+    [MenuItem("Tools/Cocoa's Toolbox/Hair Mesh Deleter")]
     public static void Open()
     {
         var win = GetWindow<HairMeshDeleter>(false, WINDOW_TITLE, true);
@@ -164,7 +164,7 @@ public class HairMeshDeleter : EditorWindow
         }
     }
 
-    [MenuItem("GameObject/Cocoa's Toolbox/Hair Mesh Deleter (Experimental)", false, 25)]
+    [MenuItem("GameObject/Cocoa's Toolbox/Hair Mesh Deleter", false, 25)]
     private static void OpenFromHierarchyContext(MenuCommand command)
     {
         GameObject go = command.context as GameObject ?? Selection.activeGameObject;
@@ -178,7 +178,7 @@ public class HairMeshDeleter : EditorWindow
         }
     }
 
-    [MenuItem("CONTEXT/SkinnedMeshRenderer/Hair Mesh Deleter (Experimental)")]
+    [MenuItem("CONTEXT/SkinnedMeshRenderer/Hair Mesh Deleter")]
     private static void OpenFromSMRContext(MenuCommand command)
     {
         var smr = command.context as SkinnedMeshRenderer;
@@ -192,7 +192,7 @@ public class HairMeshDeleter : EditorWindow
         }
     }
 
-    [MenuItem("CONTEXT/MeshFilter/Hair Mesh Deleter (Experimental)")]
+    [MenuItem("CONTEXT/MeshFilter/Hair Mesh Deleter")]
     private static void OpenFromMFContext(MenuCommand command)
     {
         var mf = command.context as MeshFilter;
@@ -208,7 +208,7 @@ public class HairMeshDeleter : EditorWindow
         }
     }
 
-    [MenuItem("CONTEXT/MeshRenderer/Hair Mesh Deleter (Experimental)")]
+    [MenuItem("CONTEXT/MeshRenderer/Hair Mesh Deleter")]
     private static void OpenFromMRContext(MenuCommand command)
     {
         var mr = command.context as MeshRenderer;
@@ -715,7 +715,7 @@ public class HairMeshDeleter : EditorWindow
 
         // 2. SceneView 左上 HUD
         HairSceneOverlayRenderer.DrawSceneHUD(
-            "Hair Mesh Deleter (Experimental)",
+            "Hair Mesh Deleter",
             _selectedIslands.Count,
             _ctx.Islands.Count,
             _hoveredIslandId,
@@ -834,7 +834,7 @@ public class HairMeshDeleter : EditorWindow
 
     private void DrawHeaderSection()
     {
-        EditorGUILayout.LabelField("Hair Mesh Deleter (Experimental)", HeaderTitleStyle);
+        EditorGUILayout.LabelField("Hair Mesh Deleter", HeaderTitleStyle);
         EditorGUILayout.LabelField("Cocoa's Toolbox — 髪の房を Lキー風クリック選択 ＆ 部分削除して新規 .mesh 保存", EditorStyles.miniLabel);
         var lineRect = GUILayoutUtility.GetRect(0f, 1f, GUILayout.ExpandWidth(true));
         EditorGUI.DrawRect(lineRect, EditorStyles.label.normal.textColor * 0.3f);

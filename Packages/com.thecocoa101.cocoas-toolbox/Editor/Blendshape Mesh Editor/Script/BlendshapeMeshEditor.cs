@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Blendshape Mesh Editor (Experimental) — Cocoa's Toolbox
+/// Blendshape Mesh Editor — Cocoa's Toolbox
 /// SkinnedMeshRenderer に対して、SceneView 上で Blender の編集モード（Edit Mode）のように
 /// 頂点・辺・面・アイランドを選択・変形し、その差分を BlendShape（シェイプキー）として新規 .mesh に保存するツール。
 ///
@@ -29,7 +29,7 @@ public class BlendshapeMeshEditor : EditorWindow
     //  定数・列挙型
     // ─────────────────────────────────────────────────────────
 
-    private const string WINDOW_TITLE = "Blendshape Mesh Editor (Experimental)";
+    private const string WINDOW_TITLE = "Blendshape Mesh Editor";
     private const string DEFAULT_SAVE_DIR = "Assets/EditedBlendshapeMeshes";
     private const string ASSET_SUFFIX_MARKER = "_BSEdit-";
 
@@ -211,7 +211,7 @@ public class BlendshapeMeshEditor : EditorWindow
     //  メニュー登録
     // ─────────────────────────────────────────────────────────
 
-    [MenuItem("Tools/Cocoa's Toolbox/Blendshape Mesh Editor (Experimental)")]
+    [MenuItem("Tools/Cocoa's Toolbox/Blendshape Mesh Editor")]
     public static void Open()
     {
         var win = GetWindow<BlendshapeMeshEditor>(false, WINDOW_TITLE, true);
@@ -223,7 +223,7 @@ public class BlendshapeMeshEditor : EditorWindow
         }
     }
 
-    [MenuItem("GameObject/Cocoa's Toolbox/Blendshape Mesh Editor (Experimental)", false, 26)]
+    [MenuItem("GameObject/Cocoa's Toolbox/Blendshape Mesh Editor", false, 26)]
     private static void OpenFromHierarchy(MenuCommand command)
     {
         GameObject go = command.context as GameObject ?? Selection.activeGameObject;
@@ -237,7 +237,7 @@ public class BlendshapeMeshEditor : EditorWindow
         }
     }
 
-    [MenuItem("CONTEXT/SkinnedMeshRenderer/Blendshape Mesh Editor (Experimental)")]
+    [MenuItem("CONTEXT/SkinnedMeshRenderer/Blendshape Mesh Editor")]
     private static void OpenFromSMRContext(MenuCommand command)
     {
         var smr = command.context as SkinnedMeshRenderer;
@@ -514,6 +514,60 @@ public class BlendshapeMeshEditor : EditorWindow
         }
     }
 
+    private static void CopyMeshBaseAttributes(Mesh srcMesh, Mesh dstMesh, Vector3[] customVertices = null)
+    {
+        int vc = srcMesh.vertexCount;
+        dstMesh.vertices = customVertices ?? srcMesh.vertices;
+        dstMesh.normals = srcMesh.normals;
+        dstMesh.tangents = srcMesh.tangents;
+        dstMesh.colors32 = srcMesh.colors32;
+        dstMesh.bindposes = srcMesh.bindposes;
+
+        // 全8チャンネルUV（2D/3D/4D 次元保持）のコピー
+        for (int ch = 0; ch < 8; ch++)
+        {
+            var attr = (VertexAttribute)((int)VertexAttribute.TexCoord0 + ch);
+            if (!srcMesh.HasVertexAttribute(attr)) continue;
+
+            int dim = srcMesh.GetVertexAttributeDimension(attr);
+            if (dim == 2)
+            {
+                var uv2 = new List<Vector2>();
+                srcMesh.GetUVs(ch, uv2);
+                if (uv2.Count == vc) dstMesh.SetUVs(ch, uv2);
+            }
+            else if (dim == 3)
+            {
+                var uv3 = new List<Vector3>();
+                srcMesh.GetUVs(ch, uv3);
+                if (uv3.Count == vc) dstMesh.SetUVs(ch, uv3);
+            }
+            else if (dim == 4)
+            {
+                var uv4 = new List<Vector4>();
+                srcMesh.GetUVs(ch, uv4);
+                if (uv4.Count == vc) dstMesh.SetUVs(ch, uv4);
+            }
+        }
+
+        // 可変長 BoneWeights（5ボーン以上対応）または Legacy BoneWeight
+        var bonesPerVert = srcMesh.GetBonesPerVertex();
+        var allWeights = srcMesh.GetAllBoneWeights();
+        if (bonesPerVert.IsCreated && allWeights.IsCreated && bonesPerVert.Length == vc && allWeights.Length > 0)
+        {
+            dstMesh.SetBoneWeights(bonesPerVert, allWeights);
+        }
+        else if (srcMesh.boneWeights != null && srcMesh.boneWeights.Length == vc)
+        {
+            dstMesh.boneWeights = srcMesh.boneWeights;
+        }
+
+        // サブメッシュインデックス
+        dstMesh.subMeshCount = srcMesh.subMeshCount;
+        for (int s = 0; s < srcMesh.subMeshCount; s++)
+            dstMesh.SetTriangles(srcMesh.GetTriangles(s), s);
+    }
+
     private static Mesh CreatePreviewMeshInstance(Mesh srcMesh, Vector3[] deltas, float weight01, bool recalcNormals)
     {
         int vc = srcMesh.vertexCount;
@@ -530,31 +584,8 @@ public class BlendshapeMeshEditor : EditorWindow
         {
             previewVerts[i] = baseVerts[i] + deltas[i] * weight01;
         }
-        tmp.vertices = previewVerts;
 
-        // 法線
-        if (recalcNormals)
-        {
-            // まず元の法線をコピーし、後で RecalculateNormals
-            tmp.normals = srcMesh.normals;
-        }
-        else
-        {
-            tmp.normals = srcMesh.normals;
-        }
-
-        tmp.tangents = srcMesh.tangents;
-        tmp.uv = srcMesh.uv;
-        tmp.uv2 = srcMesh.uv2;
-        tmp.uv3 = srcMesh.uv3;
-        tmp.uv4 = srcMesh.uv4;
-        tmp.colors32 = srcMesh.colors32;
-        tmp.boneWeights = srcMesh.boneWeights;
-        tmp.bindposes = srcMesh.bindposes;
-
-        tmp.subMeshCount = srcMesh.subMeshCount;
-        for (int s = 0; s < srcMesh.subMeshCount; s++)
-            tmp.SetTriangles(srcMesh.GetTriangles(s), s);
+        CopyMeshBaseAttributes(srcMesh, tmp, previewVerts);
 
         if (recalcNormals)
         {
@@ -622,7 +653,7 @@ public class BlendshapeMeshEditor : EditorWindow
 
     private void DrawHeader()
     {
-        EditorGUILayout.LabelField("Blendshape Mesh Editor (Experimental)", HeaderTitleStyle);
+        EditorGUILayout.LabelField("Blendshape Mesh Editor", HeaderTitleStyle);
         EditorGUILayout.LabelField("Cocoa's Toolbox — SceneView 上でメッシュを変形して Blendshape として新規 .mesh 保存", SubHeaderStyle);
         var lineRect = GUILayoutUtility.GetRect(0f, 1f, GUILayout.ExpandWidth(true));
         EditorGUI.DrawRect(lineRect, EditorStyles.label.normal.textColor * 0.3f);
@@ -2137,21 +2168,8 @@ public class BlendshapeMeshEditor : EditorWindow
                 indexFormat = vc >= 65536 ? IndexFormat.UInt32 : srcMesh.indexFormat
             };
 
-            // 基本頂点属性のコピー
-            newMesh.vertices = srcMesh.vertices;
-            newMesh.normals = srcMesh.normals;
-            newMesh.tangents = srcMesh.tangents;
-            newMesh.uv = srcMesh.uv;
-            newMesh.uv2 = srcMesh.uv2;
-            newMesh.uv3 = srcMesh.uv3;
-            newMesh.uv4 = srcMesh.uv4;
-            newMesh.colors32 = srcMesh.colors32;
-            newMesh.boneWeights = srcMesh.boneWeights;
-            newMesh.bindposes = srcMesh.bindposes;
-
-            newMesh.subMeshCount = srcMesh.subMeshCount;
-            for (int s = 0; s < srcMesh.subMeshCount; s++)
-                newMesh.SetTriangles(srcMesh.GetTriangles(s), s);
+            // 全頂点属性・BoneWeights・UV・サブメッシュを完全コピー
+            CopyMeshBaseAttributes(srcMesh, newMesh);
 
             // 法線デルタ・接線デルタの計算
             var dV = new Vector3[vc];

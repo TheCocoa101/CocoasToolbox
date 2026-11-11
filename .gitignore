@@ -1,3 +1,21 @@
+# ==================================================================
+# Only push CocoasToolbox (exclude all test/user Assets & project settings)
+# ==================================================================
+/[Aa]ssets/*
+!/[Aa]ssets/.gitkeep
+
+/[Pp]ackages/*
+!/[Pp]ackages/com.thecocoa101.cocoas-toolbox/
+
+/[Pp]roject[Ss]ettings/
+.agents/
+.gemini/
+.vsconfig
+
+# Local release batch files
+*.bat
+release*.bat
+
 # Unity generated directories
 .utmp/
 /[Ll]ibrary/

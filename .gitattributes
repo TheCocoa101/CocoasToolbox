@@ -1,11 +1,35 @@
+# Text & line ending normalization for CocoasToolbox package files
 * text=auto eol=lf
-*.cs text diff=csharp
+*.cs text diff=csharp eol=lf
 *.meta text eol=lf
 *.asset text eol=lf
 *.json text eol=lf
 *.asmdef text eol=lf
+*.md text eol=lf
 *.yml text eol=lf
 *.py text eol=lf
 *.sh text eol=lf
 *.bat text eol=crlf
 *.ps1 text eol=crlf
+
+# Binary asset protection & exclude test assets from git archive / exports
+Assets/** export-ignore
+ProjectSettings/** export-ignore
+UserSettings/** export-ignore
+.agents/** export-ignore
+.gemini/** export-ignore
+*.fbx binary export-ignore
+*.blend binary export-ignore
+*.obj binary export-ignore
+*.png binary export-ignore
+*.psd binary export-ignore
+*.tga binary export-ignore
+*.jpg binary export-ignore
+*.jpeg binary export-ignore
+*.exr binary export-ignore
+*.hdr binary export-ignore
+*.wav binary export-ignore
+*.mp3 binary export-ignore
+*.ogg binary export-ignore
+*.unitypackage binary export-ignore
+*.zip binary export-ignore

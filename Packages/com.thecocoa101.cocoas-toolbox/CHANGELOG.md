@@ -1,38 +1,48 @@
 # Changelog
 
-## [1.0.8] - 2026-11-11
+## [1.0.0] - 2026-11-11
+
+- リリース
+
+## [1.0.0] - 2026-11-11
+
+- 正式版リリース（全ツールの動作検証・実機デバッグ完了、Experimental 表記削除）
+- Blendshape Mesh Editor 追加（SceneView 上でのメッシュ変形・プロポーショナル編集・BlendShape 作成）
+- Git 管理構成の整理（パッケージ本体のみを追跡、不要アセットの除外設定）
+
+## [0.1.8] - 2026-11-11
 
 - readme更新
 
-## [1.0.7] - 2026-11-11
+## [0.1.7] - 2026-11-11
 
-- Blendshape Mesh Editor追加
+- Blendshape Mesh Editor (Experimental) 追加
 
-## [1.0.6] - 2026-11-09
+## [0.1.6] - 2026-11-09
 
-- hairmesh tools
+- Hair Mesh Color Changer / Hair Mesh Deleter 追加
 
-## [1.0.5] - 2026-11-05
+## [0.1.5] - 2026-11-05
 
-- AnimationPathAdjuster追加
+- Animation Path Adjuster 追加
 
-## [1.0.4] - 2026-11-05
+## [0.1.4] - 2026-11-05
 
-- Skinned Mesh Updater追加
+- Skinned Mesh Updater 追加
 
-## [1.0.3] - 2026-11-05
+## [0.1.3] - 2026-11-05
 
-- MissingAssetImporterの挙動変更⇒unitypackageを生成するようにした。
+- Missing Asset Importer の挙動変更（.unitypackage 生成）
 
-## [1.0.2] - 2026-11-03
+## [0.1.2] - 2026-11-03
 
-- SkinnedToStaticMesh追加
+- Skinned To Static Mesh 追加
 
-## [1.0.1] - 2026-10-31
+## [0.1.1] - 2026-10-31
 
-- v1.0.1 MissingAssetImporter追加
+- Missing Asset Importer 追加
 
-## [1.0.0] - 2026-10-30
+## [0.1.0] - 2026-10-30
 
 - 初回パッケージリリース（VPM / UPM 両対応化）
 - **Armature Transfer**: 素体 Armature の Transform・コンポーネント・VRC PhysBone・不足ボーンを衣装側 Armature へコピーする機能

@@ -11,7 +11,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Skinned Mesh Updater (Experimental) — Cocoa's Toolbox
+/// Skinned Mesh Updater — Cocoa's Toolbox
 /// Blender等の外部DCCツールで編集して再エクスポートしたメッシュを、
 /// 既存の SkinnedMeshRenderer の Mesh 欄にそのまま置き換えて正しく表示・変形できるように
 /// Unity側のみで座標系・スケール・原点オフセット・ボーン順・バインドポーズを一括補正するツール。
@@ -31,8 +31,8 @@ public class SkinnedMeshUpdater : EditorWindow
     //  定数・列挙型
     // ─────────────────────────────────────────────────────────
 
-    private const string WINDOW_TITLE = "Skinned Mesh Updater (Experimental)";
-    private const string HEADER_TITLE = "Skinned Mesh Updater (Experimental)";
+    private const string WINDOW_TITLE = "Skinned Mesh Updater";
+    private const string HEADER_TITLE = "Skinned Mesh Updater";
     private const string DEFAULT_SAVE_DIR = "Assets/UpdatedSkinnedMeshes";
     private const string UPDATED_SUFFIX_MARKER = "_Updated-";
     private const string TEMP_BACKUP_DIR = "Temp/SkinnedMeshUpdaterBackups";
@@ -151,7 +151,7 @@ public class SkinnedMeshUpdater : EditorWindow
     //  メニュー登録
     // ─────────────────────────────────────────────────────────
 
-    [MenuItem("Tools/Cocoa's Toolbox/Skinned Mesh Updater (Experimental)")]
+    [MenuItem("Tools/Cocoa's Toolbox/Skinned Mesh Updater")]
     public static void Open()
     {
         var win = GetWindow<SkinnedMeshUpdater>(false, WINDOW_TITLE, true);
@@ -159,7 +159,7 @@ public class SkinnedMeshUpdater : EditorWindow
         win.Show();
     }
 
-    [MenuItem("GameObject/Cocoa's Toolbox/Skinned Mesh Updater (Experimental)", false, 22)]
+    [MenuItem("GameObject/Cocoa's Toolbox/Skinned Mesh Updater", false, 22)]
     private static void OpenFromHierarchyContext(MenuCommand command)
     {
         GameObject go = command.context as GameObject ?? Selection.activeGameObject;
@@ -180,7 +180,7 @@ public class SkinnedMeshUpdater : EditorWindow
             win.SetTargetSmr(smr);
     }
 
-    [MenuItem("CONTEXT/SkinnedMeshRenderer/Skinned Mesh Updater (Experimental)")]
+    [MenuItem("CONTEXT/SkinnedMeshRenderer/Skinned Mesh Updater")]
     private static void OpenFromSmrContext(MenuCommand command)
     {
         var smr = command.context as SkinnedMeshRenderer;

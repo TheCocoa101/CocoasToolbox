@@ -9,7 +9,7 @@ using UnityEditor.Animations;
 using UnityEngine;
 
 /// <summary>
-/// Animation Path Adjuster (Experimental) — Cocoa's Toolbox
+/// Animation Path Adjuster — Cocoa's Toolbox
 /// アニメーションクリップ（.anim）内のパスを一括で調整・書き換えできるエディタ拡張ツール。
 ///
 /// [主な機能]
@@ -26,8 +26,8 @@ public class AnimationPathAdjuster : EditorWindow
     //  定数・列挙型
     // ─────────────────────────────────────────────────────────
 
-    private const string WINDOW_TITLE = "Animation Path Adjuster (Experimental)";
-    private const string HEADER_TITLE = "Animation Path Adjuster (Experimental)";
+    private const string WINDOW_TITLE = "Animation Path Adjuster";
+    private const string HEADER_TITLE = "Animation Path Adjuster";
     private const string DEFAULT_COPY_DIR = "Assets/AdjustedAnimations";
     private const float VIRTUAL_ROW_HEIGHT = 22f;
 
@@ -240,10 +240,10 @@ public class AnimationPathAdjuster : EditorWindow
     });
 
     // ─────────────────────────────────────────────────────────
-    //  メニュー登録（すべて (Experimental) 付き）
+    //  メニュー登録
     // ─────────────────────────────────────────────────────────
 
-    [MenuItem("Tools/Cocoa's Toolbox/Animation Path Adjuster (Experimental)")]
+    [MenuItem("Tools/Cocoa's Toolbox/Animation Path Adjuster")]
     public static void Open()
     {
         var win = GetWindow<AnimationPathAdjuster>(false, WINDOW_TITLE, true);
@@ -251,7 +251,7 @@ public class AnimationPathAdjuster : EditorWindow
         win.Show();
     }
 
-    [MenuItem("Assets/Cocoa's Toolbox/Animation Path Adjuster (Experimental)", false, 30)]
+    [MenuItem("Assets/Cocoa's Toolbox/Animation Path Adjuster", false, 30)]
     private static void OpenFromProjectSelection()
     {
         var win = GetWindow<AnimationPathAdjuster>(false, WINDOW_TITLE, true);
@@ -261,7 +261,7 @@ public class AnimationPathAdjuster : EditorWindow
         win.AddObjectsFromCurrentProjectSelection(clearExisting: false);
     }
 
-    [MenuItem("CONTEXT/AnimationClip/Animation Path Adjuster (Experimental)")]
+    [MenuItem("CONTEXT/AnimationClip/Animation Path Adjuster")]
     private static void OpenFromClipContext(MenuCommand command)
     {
         var clip = command.context as AnimationClip;
@@ -276,7 +276,7 @@ public class AnimationPathAdjuster : EditorWindow
         }
     }
 
-    [MenuItem("CONTEXT/Animator/Animation Path Adjuster (Experimental)")]
+    [MenuItem("CONTEXT/Animator/Animation Path Adjuster")]
     private static void OpenFromAnimatorContext(MenuCommand command)
     {
         var animator = command.context as Animator;

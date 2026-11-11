@@ -31,15 +31,15 @@ Unity 上部メニューの **`Tools > Cocoa's Toolbox`** から開けます。
   - 複数の Blendshape を任意のウェイトでリアルタイムプレビューしながら合成し、元の FBX / Mesh を変更せず非破壊で新しい `.mesh` アセットとしてベイク保存します。
 - **Missing Asset Importer** (`Tools > Cocoa's Toolbox > Missing Asset Importer`)
   - Migrate先のプロジェクトにて、元プロジェクトフォルダと Missing になっている Prefab をセットして `GET` ボタンを押すだけで、不足しているアセット（および連鎖する依存ファイル）だけを GUID を維持したまま `.unitypackage` 化してインポート画面を開きます。
-- **Skinned To Static Mesh (Experimental)** (`Tools > Cocoa's Toolbox > Skinned To Static Mesh (Experimental)` / Hierarchy 右クリック `Cocoa's Toolbox`)
+- **Skinned To Static Mesh** (`Tools > Cocoa's Toolbox > Skinned To Static Mesh` / Hierarchy 右クリック `Cocoa's Toolbox`)
   - ボーン変形や BlendShape で曲げて形を作った状態の SkinnedMeshRenderer を、見た目上の位置・形状を維持したままボーンなしの StaticMesh（MeshFilter + MeshRenderer / `.mesh`）へ変換します。複製生成・その場変換、指定ボーンへの追従配置、複数メッシュの1メッシュ結合に対応。
-- **Skinned Mesh Updater (Experimental)** (`Tools > Cocoa's Toolbox > Skinned Mesh Updater (Experimental)` / Hierarchy・SkinnedMeshRenderer 右クリック)
+- **Skinned Mesh Updater** (`Tools > Cocoa's Toolbox > Skinned Mesh Updater` / Hierarchy・SkinnedMeshRenderer 右クリック)
   - Blender等の外部ツールで編集・再エクスポートしたメッシュを既存の SkinnedMeshRenderer の Mesh 欄に置き換える際、座標系（軸回転）・スケール（×0.01 / ×100 等）・原点オフセット・ボーン順・バインドポーズ軸ズレによる表示破綻を Unity 側のみで自動補正します。シーン上でのリアルタイムプレビュー、新しい `.mesh` アセット作成、GUIDを維持した `.fbx` 上書き保存に対応。
-- **Animation Path Adjuster (Experimental)** (`Tools > Cocoa's Toolbox > Animation Path Adjuster (Experimental)` / Project 右クリック `Cocoa's Toolbox`)
+- **Animation Path Adjuster** (`Tools > Cocoa's Toolbox > Animation Path Adjuster` / Project 右クリック `Cocoa's Toolbox`)
   - 複数の `.anim` ファイル（またはフォルダ・AnimatorController）をまとめて登録してパスを一括変更したり、1つの `.anim` 内の個別要素（シェイプキー・Active切替・マテリアル差替等）を複数選択してパスを書き換えられます。親階層の追加（`Body` → `○○/Body`）・削除・Hierarchyドロップ自動入力・基準アバターからの移動先パス自動探索に対応。
-- **Hair Mesh Color Changer (Experimental)** (`Tools > Cocoa's Toolbox > Hair Mesh Color Changer (Experimental)` / Hierarchy 右クリック `Cocoa's Toolbox`)
+- **Hair Mesh Color Changer** (`Tools > Cocoa's Toolbox > Hair Mesh Color Changer` / Hierarchy 右クリック `Cocoa's Toolbox`)
   - 髪メッシュの一本一本（アイランド / 房）を SceneView 上でクリック選択（Blender の編集モード `L` キー風リンク選択）し、4つの基本色彩調整スライダー（色相・彩度・明度・コントラスト）で部分的に髪色を変更したり、lilToon 用のマスクテクスチャ（`.png`）を生成・自動設定できます。クリックと同時に選択箇所の UV がハイライトされるリアルタイム・テクスチャビュワー付き。
-- **Hair Mesh Deleter (Experimental)** (`Tools > Cocoa's Toolbox > Hair Mesh Deleter (Experimental)` / Hierarchy 右クリック `Cocoa's Toolbox`)
+- **Hair Mesh Deleter** (`Tools > Cocoa's Toolbox > Hair Mesh Deleter` / Hierarchy 右クリック `Cocoa's Toolbox`)
   - 髪メッシュの一本一本を SceneView 上でクリック選択（`L` キー風リンク選択）し、リアルタイムに削除プレビュー確認しながら部分削除して、ボーンウェイト・BlendShape・全UVを維持した新しい `.mesh` アセットとして非破壊保存します。リアルタイム・テクスチャビュワー付き。
-- **Blendshape Mesh Editor (Experimental)** (`Tools > Cocoa's Toolbox > Blendshape Mesh Editor (Experimental)` / Hierarchy・SkinnedMeshRenderer 右クリック)
+- **Blendshape Mesh Editor** (`Tools > Cocoa's Toolbox > Blendshape Mesh Editor` / Hierarchy・SkinnedMeshRenderer 右クリック)
   - SkinnedMeshRenderer に対して、SceneView 上で Blender の編集モードのように頂点・辺・面・アイランドを選択してプロポーショナル編集やギズモ・ブラシで変形し、その差分を新しい BlendShape（シェイプキー）として追加した `.mesh` アセットを新規保存します。ボーン変形・スケール・既存 BlendShape 下での逆スキニング計算、同座標頂点の自動結合移動（シーム割れ防止）、X軸ミラー対称編集に対応。

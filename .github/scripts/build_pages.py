@@ -63,8 +63,10 @@ def build_html(
         ver = html.escape(item["version"])
         unity_ver = html.escape(item.get("unity", "2022.3"))
         dl_url = html.escape(item["url"])
+        is_pre = "-" in item["version"]
+        pre_badge = ' <span style="background:#e09f3e;color:#121318;font-size:0.75rem;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;vertical-align:middle;">Pre-release</span>' if is_pre else ''
         rows.append(
-            f"<tr><td><code>v{ver}</code></td><td>Unity {unity_ver}+</td>"
+            f"<tr><td><code>v{ver}</code>{pre_badge}</td><td>Unity {unity_ver}+</td>"
             f'<td><a href="{dl_url}">.zip ダウンロード</a></td></tr>'
         )
     rows_html = "\n".join(rows) if rows else '<tr><td colspan="3">リリース準備中</td></tr>'
@@ -268,6 +270,12 @@ def main() -> int:
                 p_name = pkg_manifest.get("name")
                 p_ver = pkg_manifest.get("version")
                 if not p_name or not p_ver:
+                    continue
+
+                # 1.0.0 以前の非公開フィルタ（MIN_PUBLIC_VERSION 未満は除外）
+                min_ver = os.environ.get("MIN_PUBLIC_VERSION", "1.0.0-0")
+                if min_ver and parse_semver_key(p_ver) < parse_semver_key(min_ver):
+                    print(f"Skipping v{p_ver} (older than min public version v{min_ver})")
                     continue
 
                 pkg_manifest["url"] = asset["browser_download_url"]

@@ -139,6 +139,7 @@ def main() -> int:
     sha256_hex = hashlib.sha256(zip_path.read_bytes()).hexdigest()
     print(f"Built {zip_path} (SHA256: {sha256_hex})")
 
+    is_prerelease = "-" in version
     gh_output = os.environ.get("GITHUB_OUTPUT")
     if gh_output:
         with open(gh_output, "a", encoding="utf-8") as f:
@@ -148,6 +149,7 @@ def main() -> int:
             f.write(f"zip_name={zip_name}\n")
             f.write(f"zip_path={zip_path}\n")
             f.write(f"zip_sha256={sha256_hex}\n")
+            f.write(f"prerelease={'true' if is_prerelease else 'false'}\n")
 
     return 0
 

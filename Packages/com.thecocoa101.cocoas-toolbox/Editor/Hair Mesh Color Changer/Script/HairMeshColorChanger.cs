@@ -20,7 +20,7 @@ public class HairMeshColorChanger : EditorWindow
     //  定数・列挙型
     // ─────────────────────────────────────────────────────────
 
-    private const string WINDOW_TITLE = "Hair Mesh Color Changer (Experimental)";
+    private const string WINDOW_TITLE = "Hair Mesh Color Changer";
     private const string DEFAULT_SAVE_DIR = "Assets/HairColorChanged";
     private const string COLOR_TEX_SUFFIX = "_HairColor-";
     private const string MASK_TEX_SUFFIX = "_HairMask-";
@@ -215,7 +215,7 @@ public class HairMeshColorChanger : EditorWindow
     //  メニュー登録
     // ─────────────────────────────────────────────────────────
 
-    [MenuItem("Tools/Cocoa's Toolbox/Hair Mesh Color Changer (Experimental)")]
+    [MenuItem("Tools/Cocoa's Toolbox/Hair Mesh Color Changer")]
     public static void Open()
     {
         var win = GetWindow<HairMeshColorChanger>(false, WINDOW_TITLE, true);
@@ -227,7 +227,7 @@ public class HairMeshColorChanger : EditorWindow
         }
     }
 
-    [MenuItem("GameObject/Cocoa's Toolbox/Hair Mesh Color Changer (Experimental)", false, 24)]
+    [MenuItem("GameObject/Cocoa's Toolbox/Hair Mesh Color Changer", false, 24)]
     private static void OpenFromHierarchyContext(MenuCommand command)
     {
         GameObject go = command.context as GameObject ?? Selection.activeGameObject;
@@ -241,7 +241,7 @@ public class HairMeshColorChanger : EditorWindow
         }
     }
 
-    [MenuItem("CONTEXT/SkinnedMeshRenderer/Hair Mesh Color Changer (Experimental)")]
+    [MenuItem("CONTEXT/SkinnedMeshRenderer/Hair Mesh Color Changer")]
     private static void OpenFromSMRContext(MenuCommand command)
     {
         var smr = command.context as SkinnedMeshRenderer;
@@ -255,7 +255,7 @@ public class HairMeshColorChanger : EditorWindow
         }
     }
 
-    [MenuItem("CONTEXT/MeshRenderer/Hair Mesh Color Changer (Experimental)")]
+    [MenuItem("CONTEXT/MeshRenderer/Hair Mesh Color Changer")]
     private static void OpenFromMRContext(MenuCommand command)
     {
         var mr = command.context as MeshRenderer;
@@ -958,7 +958,7 @@ public class HairMeshColorChanger : EditorWindow
 
         // 2. SceneView 左上 HUD 表示
         HairSceneOverlayRenderer.DrawSceneHUD(
-            "Hair Mesh Color Changer (Experimental)",
+            "Hair Mesh Color Changer",
             _selectedIslands.Count,
             _ctx.Islands.Count,
             _hoveredIslandId,
@@ -1080,7 +1080,7 @@ public class HairMeshColorChanger : EditorWindow
 
     private void DrawHeaderSection()
     {
-        EditorGUILayout.LabelField("Hair Mesh Color Changer (Experimental)", HeaderTitleStyle);
+        EditorGUILayout.LabelField("Hair Mesh Color Changer", HeaderTitleStyle);
         EditorGUILayout.LabelField("Cocoa's Toolbox — 髪の房を Lキー風クリック選択 ＆ 4スライダー色調整・lilToonマスク生成", EditorStyles.miniLabel);
         var lineRect = GUILayoutUtility.GetRect(0f, 1f, GUILayout.ExpandWidth(true));
         EditorGUI.DrawRect(lineRect, EditorStyles.label.normal.textColor * 0.3f);
