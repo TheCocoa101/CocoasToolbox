@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.7] - 2026-11-11
+
+- Blendshape Mesh Editor追加
+
 ## [1.0.6] - 2026-11-09
 
 - hairmesh tools

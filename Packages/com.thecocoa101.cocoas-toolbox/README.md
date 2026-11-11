@@ -2,6 +2,11 @@
 
 VRChatアバター改変やUnity作業を効率化するエディタ拡張ツール集です。
 
+> [!WARNING]
+> **注意事項・免責事項**  
+> 本ツールボックスに含まれる各機能は**バイブコーディング（AIコード生成）**によって作成された実験的・個人向けツールです。  
+> コードの品質や完全な動作保証、将来的な互換性保証はございません。予期せぬ不具合やメッシュ・シーンの破損を防ぐため、**必ずプロジェクトやアセットのバックアップを取った上で自己責任にてご利用ください。**
+
 ## 収録ツール
 
 Unity 上部メニューの **`Tools > Cocoa's Toolbox`** から開けます。
@@ -22,3 +27,5 @@ Unity 上部メニューの **`Tools > Cocoa's Toolbox`** から開けます。
   - 髪メッシュの一本一本（アイランド / 房）を SceneView 上でクリック選択（Blender の編集モード `L` キー風リンク選択）し、4つの基本色彩調整スライダー（色相・彩度・明度・コントラスト）で部分的に髪色を変更したり、lilToon 用のマスクテクスチャ（`.png`）を生成・自動設定できます。クリックと同時に選択箇所の UV がハイライトされるリアルタイム・テクスチャビュワー付き。
 - **Hair Mesh Deleter (Experimental)** (`Tools > Cocoa's Toolbox > Hair Mesh Deleter (Experimental)` / Hierarchy 右クリック `Cocoa's Toolbox`)
   - 髪メッシュの一本一本を SceneView 上でクリック選択（`L` キー風リンク選択）し、リアルタイムに削除プレビュー確認しながら部分削除して、ボーンウェイト・BlendShape・全UVを維持した新しい `.mesh` アセットとして非破壊保存します。リアルタイム・テクスチャビュワー付き。
+- **Blendshape Mesh Editor (Experimental)** (`Tools > Cocoa's Toolbox > Blendshape Mesh Editor (Experimental)` / Hierarchy・SkinnedMeshRenderer 右クリック)
+  - SkinnedMeshRenderer に対して、SceneView 上で Blender の編集モードのように頂点・辺・面・アイランドを選択してプロポーショナル編集やギズモ・ブラシで変形し、その差分を新しい BlendShape（シェイプキー）として追加した `.mesh` アセットを新規保存します。ボーン変形・スケール・既存 BlendShape 下での逆スキニング計算、同座標頂点の自動結合移動（シーム割れ防止）、X軸ミラー対称編集に対応。
