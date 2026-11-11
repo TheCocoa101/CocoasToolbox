@@ -1,7 +1,7 @@
 {
   "name": "com.thecocoa101.cocoas-toolbox",
   "displayName": "Cocoa's Toolbox",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "unity": "2022.3",
   "description": "VRChatアバター改変・Unity作業を効率化するエディタ拡張ツール集（Armature Transfer / New Blendshape From Mix / Missing Asset Importer / Skinned To Static Mesh (Experimental) / Skinned Mesh Updater (Experimental) / Animation Path Adjuster (Experimental) / Hair Mesh Color Changer (Experimental) / Hair Mesh Deleter (Experimental) / Blendshape Mesh Editor (Experimental)）",
   "author": {

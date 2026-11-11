@@ -3,6 +3,11 @@
 VRChatアバター改変やUnity作業を効率化するエディタ拡張ツール集です。  
 **VCC / ALCOM（VPM）** からリポジトリを追加してワンクリックで導入・バージョン更新できます。
 
+> [!WARNING]
+> **注意事項・免責事項**  
+> 本ツールボックスに含まれる各機能は**バイブコーディング（AIコード生成）**によって作成された実験的・個人向けツールです。  
+> コードの品質や完全な動作保証、将来的な互換性保証はございません。予期せぬ不具合やメッシュ・シーンの破損を防ぐため、**必ずプロジェクトやアセットのバックアップを取った上で自己責任にてご利用ください。**
+
 ---
 
 ## VCC / ALCOM への導入方法
@@ -36,17 +41,5 @@ Unity 上部メニューの **`Tools > Cocoa's Toolbox`** から開けます。
   - 髪メッシュの一本一本（アイランド / 房）を SceneView 上でクリック選択（Blender の編集モード `L` キー風リンク選択）し、4つの基本色彩調整スライダー（色相・彩度・明度・コントラスト）で部分的に髪色を変更したり、lilToon 用のマスクテクスチャ（`.png`）を生成・自動設定できます。クリックと同時に選択箇所の UV がハイライトされるリアルタイム・テクスチャビュワー付き。
 - **Hair Mesh Deleter (Experimental)** (`Tools > Cocoa's Toolbox > Hair Mesh Deleter (Experimental)` / Hierarchy 右クリック `Cocoa's Toolbox`)
   - 髪メッシュの一本一本を SceneView 上でクリック選択（`L` キー風リンク選択）し、リアルタイムに削除プレビュー確認しながら部分削除して、ボーンウェイト・BlendShape・全UVを維持した新しい `.mesh` アセットとして非破壊保存します。リアルタイム・テクスチャビュワー付き。
-
----
-
-## 開発・新バージョンのリリース手順
-
-このリポジトリ自体が **VPM パッケージ開発用の Unity プロジェクト（Unity 2022.3.22f1）** になっています。
-
-1. **開発環境の起動**:
-   - VCC / ALCOM の **Add Existing Project** からこのフォルダ（`E:\UnityProjects\CocoasToolbox`）を追加して Unity で開きます。
-   - Project ウィンドウ内の `Packages/Cocoa's Toolbox`（実体は `Packages/com.thecocoa101.cocoas-toolbox/`）配下でスクリプトの編集や新規ツールの追加・動作テストを行えます。
-2. **新バージョンのリリース**:
-   - リポジトリ直下の **`release.bat`** をダブルクリックして実行します。
-   - 新しいバージョン番号（Enterキーのみで `1.0.1` のように自動カウントアップ）と変更メモを入力すると、`package.json`・`CHANGELOG.md` の更新から `git commit` ＆ `git push` まで自動で行われます。
-   - GitHub にプッシュされると **GitHub Actions** が自動実行され、GitHub Release（`.zip` 作成）と VPM インデックス（`index.json`）が自動更新されます。
+- **Blendshape Mesh Editor (Experimental)** (`Tools > Cocoa's Toolbox > Blendshape Mesh Editor (Experimental)` / Hierarchy・SkinnedMeshRenderer 右クリック)
+  - SkinnedMeshRenderer に対して、SceneView 上で Blender の編集モードのように頂点・辺・面・アイランドを選択してプロポーショナル編集やギズモ・ブラシで変形し、その差分を新しい BlendShape（シェイプキー）として追加した `.mesh` アセットを新規保存します。ボーン変形・スケール・既存 BlendShape 下での逆スキニング計算、同座標頂点の自動結合移動（シーム割れ防止）、X軸ミラー対称編集に対応。

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.8] - 2026-11-11
+
+- readme更新
+
 ## [1.0.7] - 2026-11-11
 
 - Blendshape Mesh Editor追加
