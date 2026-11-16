@@ -5,7 +5,7 @@
 !/[Aa]ssets/.gitkeep
 
 /[Pp]ackages/*
-!/[Pp]ackages/com.thecocoa101.cocoas-toolbox/
+!/[Pp]ackages/com.thecocoa101.*/
 
 /[Pp]roject[Ss]ettings/
 .agents/

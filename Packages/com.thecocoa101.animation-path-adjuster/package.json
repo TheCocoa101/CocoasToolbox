@@ -1,0 +1,26 @@
+{
+  "name": "com.thecocoa101.animation-path-adjuster",
+  "displayName": "Animation Path Adjuster",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "複数の .anim ファイルや AnimatorController のアニメーションパスを一括変更・探索・書き換えするエディタ拡張ツール（Cocoa's Toolbox）",
+  "author": {
+    "name": "TheCocoa101",
+    "url": "https://github.com/TheCocoa101"
+  },
+  "documentationUrl": "https://github.com/TheCocoa101/CocoasToolbox",
+  "changelogUrl": "https://github.com/TheCocoa101/CocoasToolbox/blob/main/Packages/com.thecocoa101.animation-path-adjuster/CHANGELOG.md",
+  "repo": "https://thecocoa101.github.io/CocoasToolbox/index.json",
+  "dependencies": {},
+  "vpmDependencies": {},
+  "legacyPackages": [
+    "com.thecocoa101.cocoas-toolbox"
+  ],
+  "keywords": [
+    "VRChat",
+    "Avatar",
+    "Editor",
+    "Animation",
+    "Cocoa's Toolbox"
+  ]
+}

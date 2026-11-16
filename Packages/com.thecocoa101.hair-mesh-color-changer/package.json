@@ -1,0 +1,29 @@
+{
+  "name": "com.thecocoa101.hair-mesh-color-changer",
+  "displayName": "Hair Mesh Color Changer",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "髪メッシュの房（アイランド）を SceneView 上でクリック選択し、部分色変更や lilToon 用マスクテクスチャを生成・設定するエディタ拡張ツール（Cocoa's Toolbox）",
+  "author": {
+    "name": "TheCocoa101",
+    "url": "https://github.com/TheCocoa101"
+  },
+  "documentationUrl": "https://github.com/TheCocoa101/CocoasToolbox",
+  "changelogUrl": "https://github.com/TheCocoa101/CocoasToolbox/blob/main/Packages/com.thecocoa101.hair-mesh-color-changer/CHANGELOG.md",
+  "repo": "https://thecocoa101.github.io/CocoasToolbox/index.json",
+  "dependencies": {},
+  "vpmDependencies": {
+    "com.thecocoa101.hair-mesh-core": ">=0.1.0"
+  },
+  "legacyPackages": [
+    "com.thecocoa101.cocoas-toolbox"
+  ],
+  "keywords": [
+    "VRChat",
+    "Avatar",
+    "Editor",
+    "Hair",
+    "Texture",
+    "Cocoa's Toolbox"
+  ]
+}

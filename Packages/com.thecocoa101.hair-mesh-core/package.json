@@ -1,0 +1,26 @@
+{
+  "name": "com.thecocoa101.hair-mesh-core",
+  "displayName": "Hair Mesh Core",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Hair Mesh Color Changer / Hair Mesh Deleter 用の共通コアライブラリです。",
+  "author": {
+    "name": "TheCocoa101",
+    "url": "https://github.com/TheCocoa101"
+  },
+  "documentationUrl": "https://github.com/TheCocoa101/CocoasToolbox",
+  "changelogUrl": "https://github.com/TheCocoa101/CocoasToolbox/blob/main/Packages/com.thecocoa101.hair-mesh-core/CHANGELOG.md",
+  "repo": "https://thecocoa101.github.io/CocoasToolbox/index.json",
+  "dependencies": {},
+  "vpmDependencies": {},
+  "legacyPackages": [
+    "com.thecocoa101.cocoas-toolbox"
+  ],
+  "keywords": [
+    "VRChat",
+    "Avatar",
+    "Editor",
+    "Hair",
+    "Cocoa's Toolbox"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "com.thecocoa101.skinned-mesh-updater",
+  "displayName": "Skinned Mesh Updater",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Blender 等で再エクスポートしたメッシュの座標軸・スケール・原点・ボーン順・バインドポーズズレを自動補正して差し替えるエディタ拡張ツール（Cocoa's Toolbox）",
+  "author": {
+    "name": "TheCocoa101",
+    "url": "https://github.com/TheCocoa101"
+  },
+  "documentationUrl": "https://github.com/TheCocoa101/CocoasToolbox",
+  "changelogUrl": "https://github.com/TheCocoa101/CocoasToolbox/blob/main/Packages/com.thecocoa101.skinned-mesh-updater/CHANGELOG.md",
+  "repo": "https://thecocoa101.github.io/CocoasToolbox/index.json",
+  "dependencies": {},
+  "vpmDependencies": {},
+  "legacyPackages": [
+    "com.thecocoa101.cocoas-toolbox"
+  ],
+  "keywords": [
+    "VRChat",
+    "Avatar",
+    "Editor",
+    "SkinnedMesh",
+    "Cocoa's Toolbox"
+  ]
+}

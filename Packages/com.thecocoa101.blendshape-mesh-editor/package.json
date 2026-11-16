@@ -1,0 +1,27 @@
+{
+  "name": "com.thecocoa101.blendshape-mesh-editor",
+  "displayName": "Blendshape Mesh Editor",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "SceneView 上でメッシュを直接変形し、その差分を新しい BlendShape（シェイプキー）として .mesh アセットに保存するエディタ拡張ツール（Cocoa's Toolbox）",
+  "author": {
+    "name": "TheCocoa101",
+    "url": "https://github.com/TheCocoa101"
+  },
+  "documentationUrl": "https://github.com/TheCocoa101/CocoasToolbox",
+  "changelogUrl": "https://github.com/TheCocoa101/CocoasToolbox/blob/main/Packages/com.thecocoa101.blendshape-mesh-editor/CHANGELOG.md",
+  "repo": "https://thecocoa101.github.io/CocoasToolbox/index.json",
+  "dependencies": {},
+  "vpmDependencies": {},
+  "legacyPackages": [
+    "com.thecocoa101.cocoas-toolbox"
+  ],
+  "keywords": [
+    "VRChat",
+    "Avatar",
+    "Editor",
+    "Blendshape",
+    "Mesh",
+    "Cocoa's Toolbox"
+  ]
+}

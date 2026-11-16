@@ -1,5 +1,5 @@
 param(
-    [string]$PackageRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\Packages\com.thecocoa101.cocoas-toolbox")).Path
+    [string]$PackageRoot = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,7 +60,7 @@ ${importer}:
 "@ -replace "`r`n", "`n"
 }
 
-function Sync-DirectoryMetas([string]$CurrentDir) {
+function Sync-DirectoryMetas([string]$RootDir, [string]$CurrentDir) {
     $entries = Get-ChildItem -LiteralPath $CurrentDir -Force
     foreach ($entry in $entries) {
         if (Test-IgnoredName $entry.Name) {
@@ -72,7 +72,7 @@ function Sync-DirectoryMetas([string]$CurrentDir) {
             $targetName = [System.IO.Path]::GetFileName($targetPath)
             if ((-not (Test-Path -LiteralPath $targetPath)) -or (Test-IgnoredName $targetName)) {
                 Remove-Item -LiteralPath $entry.FullName -Force
-                Write-Host "[meta] Removed orphan meta: $($entry.FullName.Substring($PackageRoot.Length + 1))"
+                Write-Host "[meta] Removed orphan meta: $($entry.FullName.Substring($RootDir.Length + 1))"
             }
             continue
         }
@@ -83,16 +83,26 @@ function Sync-DirectoryMetas([string]$CurrentDir) {
 
         $metaPath = "$($entry.FullName).meta"
         if (-not (Test-Path -LiteralPath $metaPath)) {
-            $rel = $entry.FullName.Substring($PackageRoot.Length + 1).Replace("\", "/")
+            $rel = $entry.FullName.Substring($RootDir.Length + 1).Replace("\", "/")
             $content = New-UnityMetaContent -RelPath $rel -IsFolder $entry.PSIsContainer
             [System.IO.File]::WriteAllText($metaPath, $content, $utf8NoBom)
             Write-Host "[meta] Generated: $rel.meta"
         }
 
         if ($entry.PSIsContainer) {
-            Sync-DirectoryMetas -CurrentDir $entry.FullName
+            Sync-DirectoryMetas -RootDir $RootDir -CurrentDir $entry.FullName
         }
     }
 }
 
-Sync-DirectoryMetas -CurrentDir $PackageRoot
+if ([string]::IsNullOrWhiteSpace($PackageRoot)) {
+    $packagesDir = (Resolve-Path (Join-Path $PSScriptRoot "..\..\Packages")).Path
+    $targets = Get-ChildItem -LiteralPath $packagesDir -Directory -Filter "com.thecocoa101.*" | Sort-Object Name
+    foreach ($t in $targets) {
+        Write-Host "[meta] Checking $($t.Name)..."
+        Sync-DirectoryMetas -RootDir $t.FullName -CurrentDir $t.FullName
+    }
+} else {
+    $resolved = (Resolve-Path -LiteralPath $PackageRoot).Path
+    Sync-DirectoryMetas -RootDir $resolved -CurrentDir $resolved
+}

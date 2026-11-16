@@ -1,0 +1,26 @@
+{
+  "name": "com.thecocoa101.skinned-to-static-mesh",
+  "displayName": "Skinned To Static Mesh",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "ポーズや BlendShape 変形後の SkinnedMeshRenderer を見た目そのままに StaticMesh へ変換・結合するエディタ拡張ツール（Cocoa's Toolbox）",
+  "author": {
+    "name": "TheCocoa101",
+    "url": "https://github.com/TheCocoa101"
+  },
+  "documentationUrl": "https://github.com/TheCocoa101/CocoasToolbox",
+  "changelogUrl": "https://github.com/TheCocoa101/CocoasToolbox/blob/main/Packages/com.thecocoa101.skinned-to-static-mesh/CHANGELOG.md",
+  "repo": "https://thecocoa101.github.io/CocoasToolbox/index.json",
+  "dependencies": {},
+  "vpmDependencies": {},
+  "legacyPackages": [
+    "com.thecocoa101.cocoas-toolbox"
+  ],
+  "keywords": [
+    "VRChat",
+    "Avatar",
+    "Editor",
+    "Mesh",
+    "Cocoa's Toolbox"
+  ]
+}

@@ -7,6 +7,16 @@ on:
   release:
     types: [published, edited, deleted]
   workflow_dispatch:
+    inputs:
+      package:
+        description: "Target package name (e.g. com.thecocoa101.armature-transfer) or 'all'"
+        required: false
+        default: "all"
+      recreate:
+        description: "Recreate existing GitHub Release if tag already exists"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -19,40 +29,63 @@ concurrency:
 
 jobs:
   release:
-    name: Build & Create GitHub Release
+    name: Build & Create GitHub Releases
     runs-on: ubuntu-latest
     if: github.event_name != 'release'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build VPM package zip
-        id: build
-        run: python3 .github/scripts/build_zip.py
-
-      - name: Create or update GitHub Release
+      - name: Build & Release updated packages
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.build.outputs.tag }}
-          VERSION: ${{ steps.build.outputs.version }}
-          ZIP_PATH: ${{ steps.build.outputs.zip_path }}
-          IS_PRERELEASE: ${{ steps.build.outputs.prerelease }}
+          TARGET_PACKAGE: ${{ inputs.package || 'all' }}
+          RECREATE_RELEASE: ${{ inputs.recreate || false }}
         run: |
-          echo "Ensuring GitHub Release ${TAG} is created with current commit..."
-          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            echo "Release ${TAG} exists. Recreating release cleanly for current commit..."
-            gh release delete "${TAG}" --repo "${GITHUB_REPOSITORY}" --yes || true
-          fi
-          PRERELEASE_FLAG=""
-          if [ "${IS_PRERELEASE}" = "true" ]; then
-            PRERELEASE_FLAG="--prerelease"
-          fi
-          gh release create "${TAG}" "${ZIP_PATH}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --target "${GITHUB_SHA}" \
-            --title "v${VERSION}" \
-            ${PRERELEASE_FLAG} \
-            --generate-notes
+          set -euo pipefail
+          ZIPS_DIR="${RUNNER_TEMP}/vpm-zips"
+          mkdir -p "${ZIPS_DIR}"
+
+          for pkg_dir in Packages/com.thecocoa101.*; do
+            [ -d "${pkg_dir}" ] || continue
+            [ -f "${pkg_dir}/package.json" ] || continue
+
+            pkg_name=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["name"])' "${pkg_dir}/package.json")
+            version=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["version"])' "${pkg_dir}/package.json")
+            tag="${pkg_name}-v${version}"
+
+            if [ "${TARGET_PACKAGE}" != "all" ] && [ "${TARGET_PACKAGE}" != "${pkg_name}" ]; then
+              continue
+            fi
+
+            if gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+              if [ "${RECREATE_RELEASE}" = "true" ]; then
+                echo "Release ${tag} exists. Recreating release cleanly for current commit..."
+                gh release delete "${tag}" --repo "${GITHUB_REPOSITORY}" --yes || true
+              else
+                echo "Release ${tag} already exists. Skipping ${pkg_name}."
+                continue
+              fi
+            fi
+
+            echo "Building ${pkg_name} v${version}..."
+            meta_json=$(python3 .github/scripts/build_zip.py --package "${pkg_dir}" --out-dir "${ZIPS_DIR}" --json)
+            zip_path=$(python3 -c 'import json, sys; print(json.loads(sys.argv[1])["zip_path"])' "${meta_json}")
+            display_name=$(python3 -c 'import json, sys; print(json.loads(sys.argv[1])["display_name"])' "${meta_json}")
+            is_prerelease=$(python3 -c 'import json, sys; print("true" if json.loads(sys.argv[1])["prerelease"] else "false")' "${meta_json}")
+
+            PRERELEASE_FLAG=""
+            if [ "${is_prerelease}" = "true" ]; then
+              PRERELEASE_FLAG="--prerelease"
+            fi
+
+            gh release create "${tag}" "${zip_path}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --target "${GITHUB_SHA}" \
+              --title "${display_name} v${version}" \
+              ${PRERELEASE_FLAG} \
+              --generate-notes
+          done
 
   pages:
     name: Update VPM Index & GitHub Pages

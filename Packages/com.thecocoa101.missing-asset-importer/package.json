@@ -1,0 +1,26 @@
+{
+  "name": "com.thecocoa101.missing-asset-importer",
+  "displayName": "Missing Asset Importer",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "Missing になっている Prefab に不足しているアセットと依存ファイルだけを元プロジェクトから GUID を維持して .unitypackage 移植するエディタ拡張ツール（Cocoa's Toolbox）",
+  "author": {
+    "name": "TheCocoa101",
+    "url": "https://github.com/TheCocoa101"
+  },
+  "documentationUrl": "https://github.com/TheCocoa101/CocoasToolbox",
+  "changelogUrl": "https://github.com/TheCocoa101/CocoasToolbox/blob/main/Packages/com.thecocoa101.missing-asset-importer/CHANGELOG.md",
+  "repo": "https://thecocoa101.github.io/CocoasToolbox/index.json",
+  "dependencies": {},
+  "vpmDependencies": {},
+  "legacyPackages": [
+    "com.thecocoa101.cocoas-toolbox"
+  ],
+  "keywords": [
+    "VRChat",
+    "Avatar",
+    "Editor",
+    "Import",
+    "Cocoa's Toolbox"
+  ]
+}

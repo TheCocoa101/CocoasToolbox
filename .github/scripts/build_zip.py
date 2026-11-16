@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Build a clean VPM .zip archive from Packages/com.thecocoa101.cocoas-toolbox."""
+"""Build a clean VPM .zip archive from a package under Packages/com.thecocoa101.*."""
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -12,7 +13,6 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-PACKAGE_REL_DIR = Path("Packages") / "com.thecocoa101.cocoas-toolbox"
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
 
 
@@ -20,8 +20,8 @@ def is_ignored_part(name: str) -> bool:
     return name.startswith(".") or name.endswith("~") or name in {"_site", "dist", "__pycache__"}
 
 
-def make_fallback_meta(rel_posix: str, is_dir: bool) -> str:
-    guid = hashlib.md5(f"cocoas-toolbox:{rel_posix}".encode("utf-8")).hexdigest()
+def make_fallback_meta(pkg_name: str, rel_posix: str, is_dir: bool) -> str:
+    guid = hashlib.md5(f"{pkg_name}:{rel_posix}".encode("utf-8")).hexdigest()
     if is_dir:
         return (
             "fileFormatVersion: 2\n"
@@ -66,28 +66,37 @@ def make_fallback_meta(rel_posix: str, is_dir: bool) -> str:
     )
 
 
-def main() -> int:
-    repo_root = Path(__file__).resolve().parents[2]
-    pkg_dir = repo_root / PACKAGE_REL_DIR
+def resolve_package_dir(repo_root: Path, pkg_arg: str) -> Path:
+    candidate = Path(pkg_arg)
+    if candidate.is_dir():
+        return candidate.resolve()
+    rel_candidate = repo_root / pkg_arg
+    if rel_candidate.is_dir():
+        return rel_candidate.resolve()
+    pkg_candidate = repo_root / "Packages" / pkg_arg
+    if pkg_candidate.is_dir():
+        return pkg_candidate.resolve()
+    raise FileNotFoundError(f"Package directory not found for '{pkg_arg}'.")
+
+
+def build_package_zip(pkg_dir: Path, out_dir: Path, log_stream=sys.stdout) -> dict:
     pkg_json_path = pkg_dir / "package.json"
     if not pkg_json_path.is_file():
-        print(f"ERROR: package.json not found at {pkg_json_path}.", file=sys.stderr)
-        return 1
+        raise FileNotFoundError(f"package.json not found at {pkg_json_path}.")
 
     manifest = json.loads(pkg_json_path.read_text(encoding="utf-8"))
     pkg_name = manifest.get("name", "").strip()
+    display_name = manifest.get("displayName", pkg_name).strip()
     version = manifest.get("version", "").strip()
 
     if not pkg_name or not version:
-        print("ERROR: 'name' and 'version' are required in package.json.", file=sys.stderr)
-        return 1
+        raise ValueError(f"'name' and 'version' are required in {pkg_json_path}.")
     if not SEMVER_RE.match(version):
-        print(f"ERROR: Invalid semantic version '{version}' in package.json.", file=sys.stderr)
-        return 1
+        raise ValueError(f"Invalid semantic version '{version}' in {pkg_json_path}.")
 
     gh_repo = os.environ.get("GITHUB_REPOSITORY", "TheCocoa101/CocoasToolbox")
     owner, repo = gh_repo.split("/", 1)
-    tag = f"v{version}"
+    tag = f"{pkg_name}-v{version}"
     zip_name = f"{pkg_name}-{version}.zip"
     pages_index_url = f"https://{owner.lower()}.github.io/{repo}/index.json"
     download_url = f"https://github.com/{owner}/{repo}/releases/download/{tag}/{zip_name}"
@@ -95,7 +104,6 @@ def main() -> int:
     manifest["url"] = download_url
     manifest["repo"] = pages_index_url
 
-    out_dir = Path(os.environ.get("RUNNER_TEMP") or tempfile.gettempdir())
     out_dir.mkdir(parents=True, exist_ok=True)
     zip_path = out_dir / zip_name
 
@@ -127,29 +135,60 @@ def main() -> int:
             if not rel_file.endswith(".meta"):
                 meta_rel = f"{rel_file}.meta"
                 if meta_rel not in included_files:
-                    print(f"WARNING: Generating fallback .meta in zip for file: {rel_file}")
-                    zf.writestr(meta_rel, make_fallback_meta(rel_file, is_dir=False).encode("utf-8"))
+                    print(f"WARNING: Generating fallback .meta in zip for file: {rel_file}", file=log_stream)
+                    zf.writestr(meta_rel, make_fallback_meta(pkg_name, rel_file, is_dir=False).encode("utf-8"))
 
         for rel_dir in sorted(included_dirs):
             meta_rel = f"{rel_dir}.meta"
             if meta_rel not in included_files:
-                print(f"WARNING: Generating fallback .meta in zip for folder: {rel_dir}")
-                zf.writestr(meta_rel, make_fallback_meta(rel_dir, is_dir=True).encode("utf-8"))
+                print(f"WARNING: Generating fallback .meta in zip for folder: {rel_dir}", file=log_stream)
+                zf.writestr(meta_rel, make_fallback_meta(pkg_name, rel_dir, is_dir=True).encode("utf-8"))
 
     sha256_hex = hashlib.sha256(zip_path.read_bytes()).hexdigest()
-    print(f"Built {zip_path} (SHA256: {sha256_hex})")
+    print(f"Built {zip_path} (SHA256: {sha256_hex})", file=log_stream)
 
-    is_prerelease = "-" in version
+    return {
+        "pkg_name": pkg_name,
+        "display_name": display_name,
+        "version": version,
+        "tag": tag,
+        "zip_name": zip_name,
+        "zip_path": str(zip_path),
+        "zip_sha256": sha256_hex,
+        "prerelease": "-" in version,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--package", required=True, help="Package directory or package name under Packages/")
+    parser.add_argument("--out-dir", default="", help="Output directory for zip (defaults to RUNNER_TEMP or temp dir)")
+    parser.add_argument("--json", action="store_true", help="Print build result metadata as JSON to stdout")
+    args = parser.parse_args()
+
+    repo_root = Path(__file__).resolve().parents[2]
+    try:
+        pkg_dir = resolve_package_dir(repo_root, args.package)
+        out_dir = Path(args.out_dir) if args.out_dir else Path(os.environ.get("RUNNER_TEMP") or tempfile.gettempdir())
+        result = build_package_zip(pkg_dir, out_dir, log_stream=sys.stderr if args.json else sys.stdout)
+    except Exception as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False))
+
     gh_output = os.environ.get("GITHUB_OUTPUT")
-    if gh_output:
+    if gh_output and not args.json:
         with open(gh_output, "a", encoding="utf-8") as f:
-            f.write(f"pkg_name={pkg_name}\n")
-            f.write(f"version={version}\n")
-            f.write(f"tag={tag}\n")
-            f.write(f"zip_name={zip_name}\n")
-            f.write(f"zip_path={zip_path}\n")
-            f.write(f"zip_sha256={sha256_hex}\n")
-            f.write(f"prerelease={'true' if is_prerelease else 'false'}\n")
+            f.write(f"pkg_name={result['pkg_name']}\n")
+            f.write(f"display_name={result['display_name']}\n")
+            f.write(f"version={result['version']}\n")
+            f.write(f"tag={result['tag']}\n")
+            f.write(f"zip_name={result['zip_name']}\n")
+            f.write(f"zip_path={result['zip_path']}\n")
+            f.write(f"zip_sha256={result['zip_sha256']}\n")
+            f.write(f"prerelease={'true' if result['prerelease'] else 'false'}\n")
 
     return 0
 

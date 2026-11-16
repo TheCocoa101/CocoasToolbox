@@ -1,0 +1,26 @@
+{
+  "name": "com.thecocoa101.new-blendshape-from-mix",
+  "displayName": "New Blendshape From Mix",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "複数の BlendShape を任意ウェイトでプレビュー合成し、非破壊で新しい BlendShape を含む .mesh アセットを作成するエディタ拡張ツール（Cocoa's Toolbox）",
+  "author": {
+    "name": "TheCocoa101",
+    "url": "https://github.com/TheCocoa101"
+  },
+  "documentationUrl": "https://github.com/TheCocoa101/CocoasToolbox",
+  "changelogUrl": "https://github.com/TheCocoa101/CocoasToolbox/blob/main/Packages/com.thecocoa101.new-blendshape-from-mix/CHANGELOG.md",
+  "repo": "https://thecocoa101.github.io/CocoasToolbox/index.json",
+  "dependencies": {},
+  "vpmDependencies": {},
+  "legacyPackages": [
+    "com.thecocoa101.cocoas-toolbox"
+  ],
+  "keywords": [
+    "VRChat",
+    "Avatar",
+    "Editor",
+    "Blendshape",
+    "Cocoa's Toolbox"
+  ]
+}

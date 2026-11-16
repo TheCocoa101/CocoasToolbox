@@ -1,0 +1,29 @@
+{
+  "name": "com.thecocoa101.hair-mesh-deleter",
+  "displayName": "Hair Mesh Deleter",
+  "version": "0.1.0",
+  "unity": "2022.3",
+  "description": "髪メッシュの房（アイランド）を SceneView 上でクリック選択し、ウェイト・BlendShape・UVを維持したまま非破壊で部分削除するエディタ拡張ツール（Cocoa's Toolbox）",
+  "author": {
+    "name": "TheCocoa101",
+    "url": "https://github.com/TheCocoa101"
+  },
+  "documentationUrl": "https://github.com/TheCocoa101/CocoasToolbox",
+  "changelogUrl": "https://github.com/TheCocoa101/CocoasToolbox/blob/main/Packages/com.thecocoa101.hair-mesh-deleter/CHANGELOG.md",
+  "repo": "https://thecocoa101.github.io/CocoasToolbox/index.json",
+  "dependencies": {},
+  "vpmDependencies": {
+    "com.thecocoa101.hair-mesh-core": ">=0.1.0"
+  },
+  "legacyPackages": [
+    "com.thecocoa101.cocoas-toolbox"
+  ],
+  "keywords": [
+    "VRChat",
+    "Avatar",
+    "Editor",
+    "Hair",
+    "Mesh",
+    "Cocoa's Toolbox"
+  ]
+}

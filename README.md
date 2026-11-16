@@ -15,9 +15,10 @@ VRChatアバター改変やUnity作業を効率化するエディタ拡張ツー
 1. 以下の公開ページを開き、**「✦ VCC / ALCOM にワンクリックで追加」** ボタンを押します（初回のみ）：
    - **公開ページ**: `https://thecocoa101.github.io/CocoasToolbox/`
    - **VPM リポジトリ URL（手動登録用）**: `https://thecocoa101.github.io/CocoasToolbox/index.json`
-2. VCC / ALCOM の各プロジェクト管理画面で **Cocoa's Toolbox** の `+` ボタンを押してインストールします。
-   - ※過去に `Assets/Cocoa's Toolbox` フォルダを直接配置していたプロジェクトでも、インストール時に `legacyFolders` 機能によって旧フォルダが自動整理され、スクリプト重複エラーなく移行できます。
-   - 新バージョン公開時は、VCC / ALCOM の更新ボタン1つで全プロジェクトをアップデートできます。
+2. VCC / ALCOM の各プロジェクト管理画面で、**使いたいツールだけの `+` ボタン**を押して個別にインストールします。
+   - ※`Hair Mesh Color Changer` / `Hair Mesh Deleter` をインストールすると、共通ライブラリの **Hair Mesh Core**（`com.thecocoa101.hair-mesh-core`）も自動的に追加されます。
+   - ※過去に統合版 `com.thecocoa101.cocoas-toolbox` を導入していたプロジェクトでも、`legacyPackages` 設定により新パッケージ導入時に旧パッケージが自動整理されます。
+   - 新バージョン公開時は、VCC / ALCOM の更新ボタンから各ツールを個別にアップデートできます。
 
 ---
 

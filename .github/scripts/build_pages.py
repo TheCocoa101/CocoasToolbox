@@ -14,7 +14,12 @@ import urllib.parse
 import zipfile
 from pathlib import Path
 
-PACKAGE_REL_DIR = Path("Packages") / "com.thecocoa101.cocoas-toolbox"
+EXCLUDED_PACKAGES = {"com.thecocoa101.cocoas-toolbox"}
+REPO_DISPLAY_NAME = "Cocoa's Toolbox"
+REPO_DESCRIPTION = (
+    "VRChatアバター改変・Unity作業を効率化するエディタ拡張ツール集。"
+    "VCC / ALCOM から必要なツールだけを個別にインストールできます。"
+)
 
 
 def parse_semver_key(ver: str) -> tuple:
@@ -48,28 +53,105 @@ def fetch_releases(gh_repo: str) -> list[dict]:
     return releases
 
 
+def load_local_author(repo_root: Path, fallback_owner: str) -> str:
+    packages_dir = repo_root / "Packages"
+    if packages_dir.is_dir():
+        for pkg_json in sorted(packages_dir.glob("com.thecocoa101.*/package.json")):
+            try:
+                data = json.loads(pkg_json.read_text(encoding="utf-8"))
+                author_obj = data.get("author", {})
+                if isinstance(author_obj, dict) and author_obj.get("name"):
+                    return str(author_obj["name"])
+                if isinstance(author_obj, str) and author_obj.strip():
+                    return author_obj.strip()
+            except Exception:
+                pass
+    return fallback_owner
+
+
 def build_html(
     display_name: str,
     description: str,
     gh_repo: str,
     index_url: str,
-    versions_info: list[dict],
+    packages: dict[str, dict],
 ) -> str:
     vcc_url = f"vcc://vpm/addRepo?url={urllib.parse.quote(index_url, safe='')}"
     repo_web_url = f"https://github.com/{gh_repo}"
 
-    rows = []
-    for item in versions_info:
-        ver = html.escape(item["version"])
-        unity_ver = html.escape(item.get("unity", "2022.3"))
-        dl_url = html.escape(item["url"])
-        is_pre = "-" in item["version"]
-        pre_badge = ' <span style="background:#e09f3e;color:#121318;font-size:0.75rem;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;vertical-align:middle;">Pre-release</span>' if is_pre else ''
-        rows.append(
-            f"<tr><td><code>v{ver}</code>{pre_badge}</td><td>Unity {unity_ver}+</td>"
-            f'<td><a href="{dl_url}">.zip ダウンロード</a></td></tr>'
+    pkg_cards = []
+    # Sort packages: regular tools first alphabetically by displayName, core library at the end
+    def pkg_sort_key(item: tuple[str, dict]) -> tuple[int, str]:
+        p_name, p_data = item
+        versions = list(p_data.get("versions", {}).values())
+        latest = max(versions, key=lambda m: parse_semver_key(m.get("version", "0.0.0"))) if versions else {}
+        d_name = latest.get("displayName", p_name)
+        is_core = 1 if p_name == "com.thecocoa101.hair-mesh-core" else 0
+        return (is_core, d_name.lower())
+
+    for p_name, p_data in sorted(packages.items(), key=pkg_sort_key):
+        versions_dict = p_data.get("versions", {})
+        if not versions_dict:
+            continue
+        versions_list = sorted(
+            versions_dict.values(),
+            key=lambda m: parse_semver_key(m.get("version", "0.0.0")),
+            reverse=True,
         )
-    rows_html = "\n".join(rows) if rows else '<tr><td colspan="3">リリース準備中</td></tr>'
+        latest = versions_list[0]
+        p_display = html.escape(latest.get("displayName", p_name))
+        p_desc = html.escape(latest.get("description", ""))
+        p_id = html.escape(p_name)
+        latest_ver = html.escape(latest.get("version", ""))
+
+        vpm_deps = latest.get("vpmDependencies") or {}
+        deps_html = ""
+        if vpm_deps:
+            deps_str = ", ".join(f"<code>{html.escape(k)}</code> ({html.escape(str(v))})" for k, v in vpm_deps.items())
+            deps_html = f'<div class="pkg-deps">依存パッケージ: {deps_str}（VCC / ALCOM で自動導入）</div>'
+
+        rows = []
+        for item in versions_list:
+            ver = html.escape(item["version"])
+            unity_ver = html.escape(item.get("unity", "2022.3"))
+            dl_url = html.escape(item["url"])
+            is_pre = "-" in item["version"]
+            pre_badge = (
+                ' <span class="badge-pre">Pre-release</span>'
+                if is_pre
+                else ""
+            )
+            rows.append(
+                f"<tr><td><code>v{ver}</code>{pre_badge}</td><td>Unity {unity_ver}+</td>"
+                f'<td><a href="{dl_url}">.zip ダウンロード</a></td></tr>'
+            )
+
+        pkg_cards.append(
+            f"""<div class="pkg-item">
+  <div class="pkg-head">
+    <div>
+      <h3>{p_display}</h3>
+      <div class="pkg-id"><code>{p_id}</code></div>
+    </div>
+    <span class="badge-ver">v{latest_ver}</span>
+  </div>
+  <p class="pkg-desc">{p_desc}</p>
+  {deps_html}
+  <details>
+    <summary>バージョン一覧（{len(versions_list)} 件）</summary>
+    <table>
+      <thead>
+        <tr><th>バージョン</th><th>対応 Unity</th><th>アーカイブ</th></tr>
+      </thead>
+      <tbody>
+        {"".join(rows)}
+      </tbody>
+    </table>
+  </details>
+</div>"""
+        )
+
+    packages_html = "\n".join(pkg_cards) if pkg_cards else '<p style="color:var(--muted);">リリース準備中</p>'
 
     return f"""<!DOCTYPE html>
 <html lang="ja">
@@ -82,6 +164,7 @@ def build_html(
       color-scheme: dark;
       --bg: #121318;
       --card: #1b1d26;
+      --subcard: #151720;
       --border: #2d3142;
       --accent: #7c9cff;
       --accent-hover: #9bb3ff;
@@ -98,7 +181,7 @@ def build_html(
       padding: 40px 20px;
     }}
     .container {{
-      max-width: 720px;
+      max-width: 780px;
       margin: 0 auto;
     }}
     .card {{
@@ -110,6 +193,7 @@ def build_html(
     }}
     h1 {{ margin: 0 0 8px; font-size: 1.8rem; }}
     h2 {{ margin: 0 0 14px; font-size: 1.15rem; }}
+    h3 {{ margin: 0 0 2px; font-size: 1.05rem; }}
     p.desc {{ margin: 0 0 22px; color: var(--muted); }}
     .btn-primary {{
       display: inline-block;
@@ -147,14 +231,74 @@ def build_html(
       font-weight: 600;
     }}
     .url-box button:hover {{ background: #34394f; }}
+    .pkg-item {{
+      background: var(--subcard);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+    }}
+    .pkg-item:last-child {{ margin-bottom: 0; }}
+    .pkg-head {{
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }}
+    .pkg-id {{
+      font-size: 0.82rem;
+      color: var(--muted);
+    }}
+    .pkg-desc {{
+      margin: 8px 0 8px;
+      font-size: 0.93rem;
+      color: var(--text);
+    }}
+    .pkg-deps {{
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }}
+    .badge-ver {{
+      background: #252b40;
+      color: var(--accent);
+      border: 1px solid #353f5e;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }}
+    .badge-pre {{
+      background: #e09f3e;
+      color: #121318;
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      margin-left: 6px;
+      vertical-align: middle;
+    }}
+    details {{
+      margin-top: 6px;
+    }}
+    summary {{
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.88rem;
+      user-select: none;
+    }}
+    summary:hover {{ color: var(--text); }}
     table {{
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
+      margin-top: 10px;
     }}
     th, td {{
       text-align: left;
-      padding: 10px 8px;
+      padding: 8px 6px;
       border-bottom: 1px solid var(--border);
     }}
     th {{ color: var(--muted); font-weight: 600; }}
@@ -179,15 +323,8 @@ def build_html(
     </div>
 
     <div class="card">
-      <h2>公開バージョン一覧</h2>
-      <table>
-        <thead>
-          <tr><th>バージョン</th><th>対応 Unity</th><th>アーカイブ</th></tr>
-        </thead>
-        <tbody>
-          {rows_html}
-        </tbody>
-      </table>
+      <h2>公開パッケージ一覧（{len(pkg_cards)} パッケージ）</h2>
+      {packages_html}
     </div>
 
     <div class="footer">
@@ -214,19 +351,16 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[2]
-    root_manifest = json.loads((repo_root / PACKAGE_REL_DIR / "package.json").read_text(encoding="utf-8"))
-
     gh_repo = os.environ.get("GITHUB_REPOSITORY", "TheCocoa101/CocoasToolbox")
     owner, repo = gh_repo.split("/", 1)
     index_url = f"https://{owner.lower()}.github.io/{repo}/index.json"
 
-    author_obj = root_manifest.get("author", {})
-    author_name = author_obj.get("name", owner) if isinstance(author_obj, dict) else str(author_obj)
-    display_name = root_manifest.get("displayName", repo)
-    description = root_manifest.get("description", "")
+    author_name = load_local_author(repo_root, owner)
+    display_name = REPO_DISPLAY_NAME
+    description = REPO_DESCRIPTION
 
     packages: dict[str, dict] = {}
-    versions_for_page: list[dict] = []
+    total_versions = 0
 
     releases = fetch_releases(gh_repo)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -271,11 +405,14 @@ def main() -> int:
                 p_ver = pkg_manifest.get("version")
                 if not p_name or not p_ver:
                     continue
+                if p_name in EXCLUDED_PACKAGES:
+                    print(f"Skipping deprecated package {p_name} v{p_ver}")
+                    continue
 
-                # 1.0.0 以前の非公開フィルタ（MIN_PUBLIC_VERSION 未満は除外）
-                min_ver = os.environ.get("MIN_PUBLIC_VERSION", "1.0.0-0")
+                # 公開バージョンフィルタ（MIN_PUBLIC_VERSION 未満は除外）
+                min_ver = os.environ.get("MIN_PUBLIC_VERSION", "0.1.0-0")
                 if min_ver and parse_semver_key(p_ver) < parse_semver_key(min_ver):
-                    print(f"Skipping v{p_ver} (older than min public version v{min_ver})")
+                    print(f"Skipping {p_name} v{p_ver} (older than min public version v{min_ver})")
                     continue
 
                 pkg_manifest["url"] = asset["browser_download_url"]
@@ -283,12 +420,10 @@ def main() -> int:
                 pkg_manifest["repo"] = index_url
 
                 packages.setdefault(p_name, {"versions": {}})["versions"][p_ver] = pkg_manifest
-                versions_for_page.append(pkg_manifest)
-
-    versions_for_page.sort(key=lambda m: parse_semver_key(m.get("version", "0.0.0")), reverse=True)
+                total_versions += 1
 
     listing = {
-        "name": f"{display_name}",
+        "name": display_name,
         "id": f"com.{owner.lower()}.{repo.lower()}",
         "url": index_url,
         "author": author_name,
@@ -303,11 +438,11 @@ def main() -> int:
     (out_dir / "vpm.json").write_text(listing_json, encoding="utf-8")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
     (out_dir / "index.html").write_text(
-        build_html(display_name, description, gh_repo, index_url, versions_for_page),
+        build_html(display_name, description, gh_repo, index_url, packages),
         encoding="utf-8",
     )
 
-    print(f"Generated VPM listing at {out_dir / 'index.json'} with {len(versions_for_page)} version(s).")
+    print(f"Generated VPM listing at {out_dir / 'index.json'} with {len(packages)} package(s), {total_versions} version(s).")
     return 0
 
 
