@@ -15,7 +15,7 @@ import zipfile
 from pathlib import Path
 
 EXCLUDED_PACKAGES = {"com.thecocoa101.cocoas-toolbox"}
-REPO_DISPLAY_NAME = "Cocoa's Toolbox"
+REPO_DISPLAY_NAME = "Cocoa VPM List"
 REPO_DESCRIPTION = (
     "VRChatアバター改変・Unity作業を効率化するエディタ拡張ツール集。"
     "VCC / ALCOM から必要なツールだけを個別にインストールできます。"
