@@ -1,11 +1,11 @@
-# Cocoa's Toolbox
+# Cocoa VPM List
 
-VRChatアバター改変やUnity作業を効率化するエディタ拡張ツール集です。  
-**VCC / ALCOM（VPM）** からリポジトリを追加してワンクリックで導入・バージョン更新できます。
+VRChatアバター改変やUnity作業を効率化するエディタ拡張ツール集（Cocoa's Toolbox）の VPM リポジトリです。  
+**VCC / ALCOM（VPM）** にリポジトリを追加することで、**使いたいツールだけを個別にインストール・アップデート**できます。
 
 > [!WARNING]
 > **注意事項・免責事項**  
-> 本ツールボックスに含まれる各機能は**バイブコーディング（AIコード生成）**によって作成された実験的・個人向けツールです。  
+> 本リポジトリに含まれる各ツールは**バイブコーディング（AIコード生成）**によって作成された実験的・個人向けツールです。  
 > コードの品質や完全な動作保証、将来的な互換性保証はございません。予期せぬ不具合やメッシュ・シーンの破損を防ぐため、**必ずプロジェクトやアセットのバックアップを取った上で自己責任にてご利用ください。**
 
 ---
@@ -17,30 +17,42 @@ VRChatアバター改変やUnity作業を効率化するエディタ拡張ツー
    - **VPM リポジトリ URL（手動登録用）**: `https://thecocoa101.github.io/CocoasToolbox/index.json`
 2. VCC / ALCOM の各プロジェクト管理画面で、**使いたいツールだけの `+` ボタン**を押して個別にインストールします。
    - ※`Hair Mesh Color Changer` / `Hair Mesh Deleter` をインストールすると、共通ライブラリの **Hair Mesh Core**（`com.thecocoa101.hair-mesh-core`）も自動的に追加されます。
-   - ※過去に統合版 `com.thecocoa101.cocoas-toolbox` を導入していたプロジェクトでも、`legacyPackages` 設定により新パッケージ導入時に旧パッケージが自動整理されます。
    - 新バージョン公開時は、VCC / ALCOM の更新ボタンから各ツールを個別にアップデートできます。
 
 ---
 
-## 収録ツール
+## 収録パッケージ一覧
 
-Unity 上部メニューの **`Tools > Cocoa's Toolbox`** から開けます。
+各ツールは導入後、Unity 上部メニューの **`Tools > Cocoa's Toolbox`** から開けます。
 
-- **Armature Transfer** (`Tools > Cocoa's Toolbox > Armature Transfer`)
+- **Armature Transfer**（`com.thecocoa101.armature-transfer` / [README](Packages/com.thecocoa101.armature-transfer/README.md)）
+  - メニュー: `Tools > Cocoa's Toolbox > Armature Transfer`
   - 素体側 Armature の Transform（Position / Rotation / Scale）、汎用コンポーネント、VRC PhysBone（Collider含む）、不足オブジェクトを衣装側 Armature の同名ボーンへ一括コピーします。
-- **New Blendshape From Mix** (`Tools > Cocoa's Toolbox > New Blendshape From Mix`)
+- **New Blendshape From Mix**（`com.thecocoa101.new-blendshape-from-mix` / [README](Packages/com.thecocoa101.new-blendshape-from-mix/README.md)）
+  - メニュー: `Tools > Cocoa's Toolbox > New Blendshape From Mix`
   - 複数の Blendshape を任意のウェイトでリアルタイムプレビューしながら合成し、元の FBX / Mesh を変更せず非破壊で新しい `.mesh` アセットとしてベイク保存します。
-- **Missing Asset Importer** (`Tools > Cocoa's Toolbox > Missing Asset Importer`)
+- **Missing Asset Importer**（`com.thecocoa101.missing-asset-importer` / [README](Packages/com.thecocoa101.missing-asset-importer/README.md)）
+  - メニュー: `Tools > Cocoa's Toolbox > Missing Asset Importer`
   - Migrate先のプロジェクトにて、元プロジェクトフォルダと Missing になっている Prefab をセットして `GET` ボタンを押すだけで、不足しているアセット（および連鎖する依存ファイル）だけを GUID を維持したまま `.unitypackage` 化してインポート画面を開きます。
-- **Skinned To Static Mesh** (`Tools > Cocoa's Toolbox > Skinned To Static Mesh` / Hierarchy 右クリック `Cocoa's Toolbox`)
+- **Skinned To Static Mesh**（`com.thecocoa101.skinned-to-static-mesh` / [README](Packages/com.thecocoa101.skinned-to-static-mesh/README.md)）
+  - メニュー: `Tools > Cocoa's Toolbox > Skinned To Static Mesh` / Hierarchy 右クリック `Cocoa's Toolbox`
   - ボーン変形や BlendShape で曲げて形を作った状態の SkinnedMeshRenderer を、見た目上の位置・形状を維持したままボーンなしの StaticMesh（MeshFilter + MeshRenderer / `.mesh`）へ変換します。複製生成・その場変換、指定ボーンへの追従配置、複数メッシュの1メッシュ結合に対応。
-- **Skinned Mesh Updater** (`Tools > Cocoa's Toolbox > Skinned Mesh Updater` / Hierarchy・SkinnedMeshRenderer 右クリック)
+- **Skinned Mesh Updater**（`com.thecocoa101.skinned-mesh-updater` / [README](Packages/com.thecocoa101.skinned-mesh-updater/README.md)）
+  - メニュー: `Tools > Cocoa's Toolbox > Skinned Mesh Updater` / Hierarchy・SkinnedMeshRenderer 右クリック
   - Blender等の外部ツールで編集・再エクスポートしたメッシュを既存の SkinnedMeshRenderer の Mesh 欄に置き換える際、座標系（軸回転）・スケール（×0.01 / ×100 等）・原点オフセット・ボーン順・バインドポーズ軸ズレによる表示破綻を Unity 側のみで自動補正します。シーン上でのリアルタイムプレビュー、新しい `.mesh` アセット作成、GUIDを維持した `.fbx` 上書き保存に対応。
-- **Animation Path Adjuster** (`Tools > Cocoa's Toolbox > Animation Path Adjuster` / Project 右クリック `Cocoa's Toolbox`)
+- **Animation Path Adjuster**（`com.thecocoa101.animation-path-adjuster` / [README](Packages/com.thecocoa101.animation-path-adjuster/README.md)）
+  - メニュー: `Tools > Cocoa's Toolbox > Animation Path Adjuster` / Project 右クリック `Cocoa's Toolbox`
   - 複数の `.anim` ファイル（またはフォルダ・AnimatorController）をまとめて登録してパスを一括変更したり、1つの `.anim` 内の個別要素（シェイプキー・Active切替・マテリアル差替等）を複数選択してパスを書き換えられます。親階層の追加（`Body` → `○○/Body`）・削除・Hierarchyドロップ自動入力・基準アバターからの移動先パス自動探索に対応。
-- **Hair Mesh Color Changer** (`Tools > Cocoa's Toolbox > Hair Mesh Color Changer` / Hierarchy 右クリック `Cocoa's Toolbox`)
-  - 髪メッシュの一本一本（アイランド / 房）を SceneView 上でクリック選択（Blender の編集モード `L` キー風リンク選択）し、4つの基本色彩調整スライダー（色相・彩度・明度・コントラスト）で部分的に髪色を変更したり、lilToon 用のマスクテクスチャ（`.png`）を生成・自動設定できます。クリックと同時に選択箇所の UV がハイライトされるリアルタイム・テクスチャビュワー付き。
-- **Hair Mesh Deleter** (`Tools > Cocoa's Toolbox > Hair Mesh Deleter` / Hierarchy 右クリック `Cocoa's Toolbox`)
-  - 髪メッシュの一本一本を SceneView 上でクリック選択（`L` キー風リンク選択）し、リアルタイムに削除プレビュー確認しながら部分削除して、ボーンウェイト・BlendShape・全UVを維持した新しい `.mesh` アセットとして非破壊保存します。リアルタイム・テクスチャビュワー付き。
-- **Blendshape Mesh Editor** (`Tools > Cocoa's Toolbox > Blendshape Mesh Editor` / Hierarchy・SkinnedMeshRenderer 右クリック)
+- **Hair Mesh Color Changer**（`com.thecocoa101.hair-mesh-color-changer` / [README](Packages/com.thecocoa101.hair-mesh-color-changer/README.md)）
+  - メニュー: `Tools > Cocoa's Toolbox > Hair Mesh Color Changer` / Hierarchy 右クリック `Cocoa's Toolbox`
+  - 髪メッシュの一本一本（アイランド / 房）を SceneView 上でクリック選択（Blender の編集モード `L` キー風リンク選択）し、4つの基本色彩調整スライダー（色相・彩度・明度・コントラスト）で部分的に髪色を変更したり、lilToon 用のマスクテクスチャ（`.png`）を生成・自動設定できます。クリックと同時に選択箇所の UV がハイライトされるリアルタイム・テクスチャビュワー付き。（依存: `com.thecocoa101.hair-mesh-core`）
+- **Hair Mesh Deleter**（`com.thecocoa101.hair-mesh-deleter` / [README](Packages/com.thecocoa101.hair-mesh-deleter/README.md)）
+  - メニュー: `Tools > Cocoa's Toolbox > Hair Mesh Deleter` / Hierarchy 右クリック `Cocoa's Toolbox`
+  - 髪メッシュの一本一本を SceneView 上でクリック選択（`L` キー風リンク選択）し、リアルタイムに削除プレビュー確認しながら部分削除して、ボーンウェイト・BlendShape・全UVを維持した新しい `.mesh` アセットとして非破壊保存します。リアルタイム・テクスチャビュワー付き。（依存: `com.thecocoa101.hair-mesh-core`）
+- **Blendshape Mesh Editor**（`com.thecocoa101.blendshape-mesh-editor` / [README](Packages/com.thecocoa101.blendshape-mesh-editor/README.md)）
+  - メニュー: `Tools > Cocoa's Toolbox > Blendshape Mesh Editor` / Hierarchy・SkinnedMeshRenderer 右クリック
   - SkinnedMeshRenderer に対して、SceneView 上で Blender の編集モードのように頂点・辺・面・アイランドを選択してプロポーショナル編集やギズモ・ブラシで変形し、その差分を新しい BlendShape（シェイプキー）として追加した `.mesh` アセットを新規保存します。ボーン変形・スケール・既存 BlendShape 下での逆スキニング計算、同座標頂点の自動結合移動（シーム割れ防止）、X軸ミラー対称編集に対応。
+
+### 共通ライブラリ
+- **Hair Mesh Core**（`com.thecocoa101.hair-mesh-core` / [README](Packages/com.thecocoa101.hair-mesh-core/README.md)）
+  - `Hair Mesh Color Changer` / `Hair Mesh Deleter` が共通で使用するコアライブラリです（いずれかを導入すると自動でインストールされます）。
